@@ -32,3 +32,8 @@ export interface StockData {
     change: number;
     changePercent: number;
 }
+
+export interface AnnualReport {
+    metric: string;
+    values: { [year: string]: number | string };
+}

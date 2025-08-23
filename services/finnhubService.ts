@@ -1,4 +1,4 @@
-import type { Filing, NewsArticle, StockData } from '../types';
+import type { Filing, NewsArticle, StockData, AnnualReport } from '../types';
 
 const API_KEY = 'd2hfijpr01qon4ec0eu0d2hfijpr01qon4ec0eug';
 const BASE_URL = 'https://finnhub.io/api/v1';
@@ -65,6 +65,20 @@ interface FinnhubNews {
     url: string;
 }
 
+interface FinnhubFinancialsReport {
+    endDate: string;
+    year: number;
+    report: {
+        bs: { concept: string; label: string; unit: string; value: number }[];
+        cf: { concept: string; label: string; unit: string; value: number }[];
+        ic: { concept: string; label: string; unit: string; value: number }[];
+    }
+}
+interface FinnhubFinancials {
+    data: FinnhubFinancialsReport[];
+    symbol: string;
+}
+
 
 export const fetchStockData = async (ticker: string): Promise<StockData | null> => {
     const [quote, profile] = await Promise.all([
@@ -117,4 +131,42 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[] | null> =
         headline: n.headline,
         summary: n.summary,
     }));
+};
+
+const METRIC_CONFIG = [
+    { name: 'Revenue', concept: 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax', report: 'ic' },
+    { name: 'Net Income', concept: 'us-gaap_NetIncomeLoss', report: 'ic' },
+    { name: 'Basic EPS', concept: 'us-gaap_EarningsPerShareBasic', report: 'ic' },
+    { name: 'Total Assets', concept: 'us-gaap_Assets', report: 'bs' },
+    { name: 'Total Liabilities', concept: 'us-gaap_Liabilities', report: 'bs' },
+    { name: 'Operating Cash Flow', concept: 'us-gaap_NetCashProvidedByUsedInOperatingActivities', report: 'cf' },
+];
+
+export const fetchFinancials = async (ticker: string): Promise<{ reports: AnnualReport[], years: string[] } | null> => {
+    const financials = await apiFetch<FinnhubFinancials>(`/stock/financials-reported?symbol=${ticker}&freq=annual`);
+
+    if (!financials || !financials.data || financials.data.length === 0) {
+        return null;
+    }
+
+    const reports = financials.data.slice(0, 10).reverse(); // Oldest to newest, max 10
+    const years = reports.map(r => r.year.toString());
+    
+    const processedData: { [metric: string]: { [year: string]: number } } = {};
+
+    METRIC_CONFIG.forEach(metric => {
+        processedData[metric.name] = {};
+        reports.forEach(reportData => {
+            const reportSection = reportData.report[metric.report as keyof typeof reportData.report];
+            const metricData = reportSection.find(item => item.concept === metric.concept);
+            processedData[metric.name][reportData.year] = metricData?.value ?? 0;
+        });
+    });
+    
+    const annualReports: AnnualReport[] = METRIC_CONFIG.map(metric => ({
+        metric: metric.name,
+        values: processedData[metric.name]
+    }));
+
+    return { reports: annualReports, years };
 };

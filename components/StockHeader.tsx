@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { StockData } from '../types';
+import { fetchStockData } from '../services/finnhubService';
+import SkeletonLoader from './SkeletonLoader';
 
 interface StockHeaderProps {
-    stockData: StockData;
+    ticker: string;
 }
 
 const formatMarketCap = (marketCap: number): string => {
@@ -23,7 +25,39 @@ const formatMarketCap = (marketCap: number): string => {
 };
 
 
-const StockHeader: React.FC<StockHeaderProps> = ({ stockData }) => {
+const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
+    const [stockData, setStockData] = useState<StockData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+     useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            setError(null);
+            setStockData(null);
+            const data = await fetchStockData(ticker);
+            if (data) {
+                setStockData(data);
+            } else {
+                setError(`Failed to fetch data for ${ticker}. Please check if the ticker is valid and try again.`);
+            }
+            setLoading(false);
+        };
+        loadData();
+    }, [ticker]);
+
+    if (loading) {
+        return <SkeletonLoader className="h-28 w-full rounded-lg" />;
+    }
+
+    if (error || !stockData) {
+        return (
+            <div className="p-4 bg-brand-secondary rounded-lg border border-red-500/50 text-center text-red-400">
+                {error || 'Stock data could not be loaded.'}
+            </div>
+        );
+    }
+
     const isPositive = stockData.change >= 0;
 
     return (

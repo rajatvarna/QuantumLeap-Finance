@@ -4,28 +4,23 @@
 
 ---
 
-### Phase 1: API Integration & State Management (Priority: Critical)
+### Phase 1: API Integration & Architecture Refactor (Priority: Critical)
 
-*Goal: Decouple the frontend from mock data generators and connect it to a real backend API. This is the most critical phase to make the application data-driven.*
+*Goal: Decouple the frontend from mock data, connect it to a real backend API, and establish a scalable component architecture. This is the most critical phase to make the application data-driven and maintainable.*
 
 -   [x] **~~Deprecate the Mock Service~~**
-    -   **Action:** ~~Once all data fetching has been migrated to the new `apiClient`, the mock service can be safely removed.~~
     -   **Status:** **Done.** `services/geminiService.ts` has been deleted and replaced with `services/finnhubService.ts`.
 
 -   [x] **~~Abstract API Calls~~**
-    -   **Action:** ~~Create a new service, e.g., `services/apiClient.ts`, that uses a configured `axios` or `fetch` instance.~~
     -   **Status:** **Done.** A new `services/finnhubService.ts` has been created to handle all live data fetching.
 
--   [ ] **Introduce a Server State Management Library**
-    -   **Action:** Integrate **TanStack Query (React Query)** into the project. This will manage data fetching, caching, background refetching, and mutations, greatly simplifying server state and removing manual `useEffect` logic.
-    -   **Files Affected:** `App.tsx` (to add the `QueryClientProvider`), all components currently fetching data.
+-   [x] **~~Refactor to Component-Level Data Fetching~~**
+    -   **Action:** ~~Move data-fetching logic from the main `Dashboard` component into individual child components.~~
+    -   **Status:** **Done.** `Dashboard.tsx` is now a pure layout component. `StockHeader.tsx`, `FilingsTable.tsx`, `NewsFeed.tsx`, and the new `Fundamentals.tsx` all fetch their own data.
 
--   [ ] **Refactor Data Fetching Logic to use TanStack Query**
-    -   **Action:** Replace all `useEffect`-based data fetching with `useQuery` hooks from TanStack Query.
-    -   **Files Affected:**
-        -   `components/Dashboard.tsx`: Replace the `useEffect` block with a `useQuery`.
-        -   `components/FilingsTable.tsx`: Replace the `useEffect` block in `FilingsTableContent` with a `useQuery`.
-        -   `components/NewsFeed.tsx`: Replace the `useEffect` block with a `useQuery`.
+-   [ ] **Introduce a Server State Management Library**
+    -   **Action:** Integrate **TanStack Query (React Query)** into the project. This will manage data fetching, caching, background refetching, and mutations, greatly simplifying server state and removing manual `useEffect` and `useState` for loading/error states.
+    -   **Files Affected:** `App.tsx` (to add the `QueryClientProvider`), all components currently fetching data.
 
 -   [ ] **Implement Real Authentication Flow**
     -   **Action:** Refactor the mock authentication to connect to a real backend.
@@ -39,6 +34,10 @@
 
 *Goal: Enhance core features from their basic prototype state and implement crucial performance optimizations for handling large-scale data.*
 
+-   [x] **~~Display Fundamental Data~~**
+    -   **Action:** ~~Create a new component to display annual financial data for the past 10 years.~~
+    -   **Status:** **Done.** The new `Fundamentals.tsx` component fetches and displays this data, gated for 'Pro' users.
+
 -   [ ] **Integrate WebSocket for Real-Time Price Updates**
     -   **Action:** Use Finnhub's WebSocket API to get live price ticks and update the `StockHeader` component in real-time without needing to refresh the page.
     -   **Files Affected:** `components/StockHeader.tsx`, `services/finnhubService.ts`.
@@ -46,10 +45,6 @@
 -   [ ] **Implement List Virtualization**
     -   **Action:** Re-implement the list rendering logic using a virtualization library like **TanStack Virtual**.
     -   **Reason:** The current `.map()` implementation will cause severe performance degradation and potential browser crashes when rendering thousands of real filings or news articles.
-    -   **Files Affected:** `components/FilingsTable.tsx`, `components/NewsFeed.tsx`.
-
--   [ ] **Add Server-Side Data Controls**
-    -   **Action:** Implement UI controls for pagination, sorting, and filtering for filings and news. The state from these controls should be passed to the API.
     -   **Files Affected:** `components/FilingsTable.tsx`, `components/NewsFeed.tsx`.
 
 -   [ ] **Enhance Search Bar with Autocomplete**
