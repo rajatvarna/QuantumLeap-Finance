@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { fetchNews } from '../services/geminiService';
+import { fetchNews } from '../services/finnhubService';
 import type { NewsArticle } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 
@@ -45,6 +44,10 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
 
         if (error) {
             return <div className="text-center text-red-400 p-4">{error}</div>;
+        }
+
+        if (news.length === 0) {
+            return <div className="text-center text-brand-text-secondary p-4">No recent news found for this ticker.</div>;
         }
 
         return (

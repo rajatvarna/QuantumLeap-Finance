@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import StockHeader from './StockHeader';
 import StockChart from './StockChart';
 import FilingsTable from './FilingsTable';
 import NewsFeed from './NewsFeed';
-import { fetchStockData } from '../services/geminiService';
+import { fetchStockData } from '../services/finnhubService';
 import type { StockData } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 
@@ -26,7 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             if (data) {
                 setStockData(data);
             } else {
-                setError(`Failed to fetch data for ${ticker}. The API might be busy, please try again.`);
+                setError(`Failed to fetch data for ${ticker}. Please check if the ticker is valid and try again.`);
             }
             setLoading(false);
         };

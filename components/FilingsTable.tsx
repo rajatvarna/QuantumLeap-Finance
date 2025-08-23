@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { fetchFilings } from '../services/geminiService';
+import { fetchFilings } from '../services/finnhubService';
 import type { Filing } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';

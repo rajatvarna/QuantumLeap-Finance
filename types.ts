@@ -1,4 +1,3 @@
-
 export enum SubscriptionPlan {
     FREE = 'Free',
     PRO = 'Pro',
@@ -8,11 +7,6 @@ export enum SubscriptionPlan {
 export interface User {
     name: string;
     plan: SubscriptionPlan;
-}
-
-export interface StockPricePoint {
-    date: string;
-    price: number;
 }
 
 export interface Filing {
@@ -32,8 +26,8 @@ export interface NewsArticle {
 export interface StockData {
     ticker: string;
     companyName: string;
-    marketCap: string;
-    peRatio: number;
+    marketCap: number;
+    peRatio?: number;
     price: number;
     change: number;
     changePercent: number;
