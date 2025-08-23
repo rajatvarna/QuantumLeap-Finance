@@ -37,3 +37,10 @@ export interface AnnualReport {
     metric: string;
     values: { [year: string]: number | string };
 }
+
+export interface SearchResult {
+    description: string;
+    displaySymbol: string;
+    symbol: string;
+    type: string;
+}

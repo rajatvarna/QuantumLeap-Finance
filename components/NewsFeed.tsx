@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchNews } from '../services/finnhubService';
 import type { NewsArticle } from '../types';
 import SkeletonLoader from './SkeletonLoader';
@@ -8,27 +9,13 @@ interface NewsFeedProps {
 }
 
 const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
-    const [news, setNews] = useState<NewsArticle[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            setError(null);
-            const data = await fetchNews(ticker);
-            if (data) {
-                setNews(data);
-            } else {
-                setError('Could not load news articles.');
-            }
-            setLoading(false);
-        };
-        loadData();
-    }, [ticker]);
+    const { data: news, isLoading, isError } = useQuery<NewsArticle[], Error>({
+        queryKey: ['news', ticker],
+        queryFn: () => fetchNews(ticker),
+    });
 
     const renderContent = () => {
-        if (loading) {
+        if (isLoading) {
             return (
                 <div className="space-y-4">
                     {[...Array(5)].map((_, i) => (
@@ -42,11 +29,11 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
             );
         }
 
-        if (error) {
-            return <div className="text-center text-red-400 p-4">{error}</div>;
+        if (isError) {
+            return <div className="text-center text-red-400 p-4">Could not load news articles.</div>;
         }
 
-        if (news.length === 0) {
+        if (!news || news.length === 0) {
             return <div className="text-center text-brand-text-secondary p-4">No recent news found for this ticker.</div>;
         }
 

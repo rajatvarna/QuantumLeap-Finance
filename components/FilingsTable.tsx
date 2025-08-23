@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchFilings } from '../services/finnhubService';
 import type { Filing } from '../types';
 import { SubscriptionPlan } from '../types';
@@ -10,26 +11,12 @@ interface FilingsTableProps {
 }
 
 const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
-    const [filings, setFilings] = useState<Filing[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data: filings, isLoading, isError } = useQuery<Filing[], Error>({
+        queryKey: ['filings', ticker],
+        queryFn: () => fetchFilings(ticker),
+    });
 
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            setError(null);
-            const data = await fetchFilings(ticker);
-            if (data) {
-                setFilings(data);
-            } else {
-                setError('Could not load company filings.');
-            }
-            setLoading(false);
-        };
-        loadData();
-    }, [ticker]);
-
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="space-y-2">
                 {[...Array(5)].map((_, i) => (
@@ -39,8 +26,12 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
         );
     }
     
-    if (error) {
-        return <div className="text-center text-red-400 p-4">{error}</div>;
+    if (isError) {
+        return <div className="text-center text-red-400 p-4">Could not load company filings.</div>;
+    }
+
+    if (!filings || filings.length === 0) {
+        return <div className="text-center text-brand-text-secondary p-4">No recent filings found.</div>;
     }
 
     return (

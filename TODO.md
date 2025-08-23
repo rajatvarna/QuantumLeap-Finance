@@ -15,12 +15,10 @@
     -   **Status:** **Done.** A new `services/finnhubService.ts` has been created to handle all live data fetching.
 
 -   [x] **~~Refactor to Component-Level Data Fetching~~**
-    -   **Action:** ~~Move data-fetching logic from the main `Dashboard` component into individual child components.~~
-    -   **Status:** **Done.** `Dashboard.tsx` is now a pure layout component. `StockHeader.tsx`, `FilingsTable.tsx`, `NewsFeed.tsx`, and the new `Fundamentals.tsx` all fetch their own data.
+    -   **Status:** **Done.** `Dashboard.tsx` is now a pure layout component. All data-fetching components fetch their own data.
 
--   [ ] **Introduce a Server State Management Library**
-    -   **Action:** Integrate **TanStack Query (React Query)** into the project. This will manage data fetching, caching, background refetching, and mutations, greatly simplifying server state and removing manual `useEffect` and `useState` for loading/error states.
-    -   **Files Affected:** `App.tsx` (to add the `QueryClientProvider`), all components currently fetching data.
+-   [x] **~~Introduce a Server State Management Library~~**
+    -   **Status:** **Done.** Integrated **TanStack Query (React Query)** across all data-fetching components (`StockHeader`, `FilingsTable`, `NewsFeed`, `Fundamentals`). Manual `useEffect`/`useState` logic for server state has been removed.
 
 -   [ ] **Implement Real Authentication Flow**
     -   **Action:** Refactor the mock authentication to connect to a real backend.
@@ -35,21 +33,19 @@
 *Goal: Enhance core features from their basic prototype state and implement crucial performance optimizations for handling large-scale data.*
 
 -   [x] **~~Display Fundamental Data~~**
-    -   **Action:** ~~Create a new component to display annual financial data for the past 10 years.~~
-    -   **Status:** **Done.** The new `Fundamentals.tsx` component fetches and displays this data, gated for 'Pro' users.
+    -   **Status:** **Done.** The `Fundamentals.tsx` component fetches and displays annual financial data, gated for 'Pro' users.
+
+-   [x] **~~Enhance Search Bar with Autocomplete~~**
+     -   **Status:** **Done.** The `SearchBar.tsx` component now includes a real-time, debounced autocomplete search feature.
+
+-   [ ] **Implement List Virtualization (CRITICAL)**
+    -   **Action:** Re-implement the list rendering logic using a virtualization library like **TanStack Virtual**.
+    -   **Reason:** This is the most critical performance optimization remaining. The current `.map()` implementation will crash the browser when rendering thousands of real filings or news articles.
+    -   **Files Affected:** `components/FilingsTable.tsx`, `components/NewsFeed.tsx`.
 
 -   [ ] **Integrate WebSocket for Real-Time Price Updates**
     -   **Action:** Use Finnhub's WebSocket API to get live price ticks and update the `StockHeader` component in real-time without needing to refresh the page.
     -   **Files Affected:** `components/StockHeader.tsx`, `services/finnhubService.ts`.
-
--   [ ] **Implement List Virtualization**
-    -   **Action:** Re-implement the list rendering logic using a virtualization library like **TanStack Virtual**.
-    -   **Reason:** The current `.map()` implementation will cause severe performance degradation and potential browser crashes when rendering thousands of real filings or news articles.
-    -   **Files Affected:** `components/FilingsTable.tsx`, `components/NewsFeed.tsx`.
-
--   [ ] **Enhance Search Bar with Autocomplete**
-    -   **Action:** Implement a type-ahead/autocomplete feature that queries Finnhub's `/search` endpoint as the user types.
-    -   **Files Affected:** `components/SearchBar.tsx`.
 
 ---
 

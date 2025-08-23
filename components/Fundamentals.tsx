@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchFinancials } from '../services/finnhubService';
 import type { AnnualReport } from '../types';
 import { SubscriptionPlan } from '../types';
@@ -25,36 +26,23 @@ const formatValue = (value: number | string): string => {
 
 
 const FundamentalsContent: React.FC<FundamentalsProps> = ({ ticker }) => {
-    const [financials, setFinancials] = useState<AnnualReport[]>([]);
-    const [years, setYears] = useState<string[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['financials', ticker],
+        queryFn: () => fetchFinancials(ticker),
+    });
 
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            setError(null);
-            const data = await fetchFinancials(ticker);
-            if (data) {
-                setFinancials(data.reports);
-                setYears(data.years);
-            } else {
-                setError('Could not load fundamental data.');
-            }
-            setLoading(false);
-        };
-        loadData();
-    }, [ticker]);
+    const financials = data?.reports;
+    const years = data?.years;
 
-    if (loading) {
+    if (isLoading) {
         return <SkeletonLoader className="h-64 w-full" />;
     }
     
-    if (error) {
-        return <div className="text-center text-red-400 p-4">{error}</div>;
+    if (isError) {
+        return <div className="text-center text-red-400 p-4">Could not load fundamental data.</div>;
     }
     
-    if (financials.length === 0) {
+    if (!financials || financials.length === 0 || !years || years.length === 0) {
         return <div className="text-center text-brand-text-secondary p-4">No fundamental data found.</div>;
     }
 

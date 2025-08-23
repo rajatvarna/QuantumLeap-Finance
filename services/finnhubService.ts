@@ -1,4 +1,4 @@
-import type { Filing, NewsArticle, StockData, AnnualReport } from '../types';
+import type { Filing, NewsArticle, StockData, AnnualReport, SearchResult } from '../types';
 
 const API_KEY = 'd2hfijpr01qon4ec0eu0d2hfijpr01qon4ec0eug';
 const BASE_URL = 'https://finnhub.io/api/v1';
@@ -7,13 +7,15 @@ async function apiFetch<T>(endpoint: string): Promise<T | null> {
     try {
         const response = await fetch(`${BASE_URL}${endpoint}&token=${API_KEY}`);
         if (!response.ok) {
-            console.error(`Finnhub API error: ${response.status} ${response.statusText}`);
-            return null;
+            const errorText = await response.text();
+            console.error(`Finnhub API error: ${response.status} ${response.statusText}`, errorText);
+            // Propagate a specific error message if possible
+            throw new Error(`Finnhub API error for ${endpoint}: ${response.status} ${response.statusText}`);
         }
         return await response.json() as T;
     } catch (error) {
         console.error("Error fetching from Finnhub API:", error);
-        return null;
+        throw error; // Re-throw the error so React Query can handle it
     }
 }
 
@@ -79,15 +81,26 @@ interface FinnhubFinancials {
     symbol: string;
 }
 
+interface FinnhubSearch {
+    count: number;
+    result: SearchResult[];
+}
 
-export const fetchStockData = async (ticker: string): Promise<StockData | null> => {
+export const searchSymbols = async (query: string): Promise<SearchResult[]> => {
+    if (!query) return [];
+    const response = await apiFetch<FinnhubSearch>(`/search?q=${query}`);
+    return response?.result || [];
+};
+
+
+export const fetchStockData = async (ticker: string): Promise<StockData> => {
     const [quote, profile] = await Promise.all([
         apiFetch<FinnhubQuote>(`/quote?symbol=${ticker}`),
         apiFetch<FinnhubProfile>(`/stock/profile2?symbol=${ticker}`)
     ]);
 
     if (!quote || !profile || !profile.ticker) {
-        return null;
+        throw new Error(`Invalid data for ticker: ${ticker}`);
     }
 
     return {
@@ -100,9 +113,9 @@ export const fetchStockData = async (ticker: string): Promise<StockData | null> 
     };
 };
 
-export const fetchFilings = async (ticker: string): Promise<Filing[] | null> => {
+export const fetchFilings = async (ticker: string): Promise<Filing[]> => {
     const filings = await apiFetch<FinnhubFiling[]>(`/stock/filings?symbol=${ticker}`);
-    if (!filings) return null;
+    if (!filings) return [];
 
     return filings.slice(0, 15).map(f => ({
         date: f.filedDate.split(' ')[0], // Keep only the date part
@@ -117,13 +130,13 @@ const formatDate = (unixTimestamp: number): string => {
     return date.toISOString().split('T')[0];
 };
 
-export const fetchNews = async (ticker: string): Promise<NewsArticle[] | null> => {
+export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
     // Get today's and 30 days ago dates in YYYY-MM-DD format
     const to = new Date().toISOString().split('T')[0];
     const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const news = await apiFetch<FinnhubNews[]>(`/company-news?symbol=${ticker}&from=${from}&to=${to}`);
-    if (!news) return null;
+    if (!news) return [];
 
     return news.slice(0, 10).map(n => ({
         publishedDate: formatDate(n.datetime),
@@ -142,11 +155,11 @@ const METRIC_CONFIG = [
     { name: 'Operating Cash Flow', concept: 'us-gaap_NetCashProvidedByUsedInOperatingActivities', report: 'cf' },
 ];
 
-export const fetchFinancials = async (ticker: string): Promise<{ reports: AnnualReport[], years: string[] } | null> => {
+export const fetchFinancials = async (ticker: string): Promise<{ reports: AnnualReport[], years: string[] }> => {
     const financials = await apiFetch<FinnhubFinancials>(`/stock/financials-reported?symbol=${ticker}&freq=annual`);
 
     if (!financials || !financials.data || financials.data.length === 0) {
-        return null;
+        return { reports: [], years: [] };
     }
 
     const reports = financials.data.slice(0, 10).reverse(); // Oldest to newest, max 10

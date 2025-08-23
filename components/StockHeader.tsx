@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { StockData } from '../types';
 import { fetchStockData } from '../services/finnhubService';
 import SkeletonLoader from './SkeletonLoader';
@@ -26,34 +27,21 @@ const formatMarketCap = (marketCap: number): string => {
 
 
 const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
-    const [stockData, setStockData] = useState<StockData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { data: stockData, isLoading, isError, error } = useQuery<StockData, Error>({
+      queryKey: ['stockData', ticker],
+      queryFn: () => fetchStockData(ticker),
+      staleTime: 5 * 60 * 1000, // Cache data for 5 minutes
+      retry: false, // Don't retry on failure for invalid tickers
+    });
 
-     useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            setError(null);
-            setStockData(null);
-            const data = await fetchStockData(ticker);
-            if (data) {
-                setStockData(data);
-            } else {
-                setError(`Failed to fetch data for ${ticker}. Please check if the ticker is valid and try again.`);
-            }
-            setLoading(false);
-        };
-        loadData();
-    }, [ticker]);
-
-    if (loading) {
+    if (isLoading) {
         return <SkeletonLoader className="h-28 w-full rounded-lg" />;
     }
 
-    if (error || !stockData) {
+    if (isError) {
         return (
             <div className="p-4 bg-brand-secondary rounded-lg border border-red-500/50 text-center text-red-400">
-                {error || 'Stock data could not be loaded.'}
+                Failed to fetch data for {ticker}. Please check if the ticker is valid.
             </div>
         );
     }
