@@ -1,0 +1,5 @@
+{
+  "name": "QuantumLeap Finance",
+  "description": "A sophisticated, high-performance financial data platform providing real-time and historical market data, company filings, and analytics. Built on a scalable microservices architecture to serve millions of users with unparalleled speed and reliability.",
+  "requestFramePermissions": []
+}
