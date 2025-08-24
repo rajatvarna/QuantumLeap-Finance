@@ -70,13 +70,13 @@ const SearchBar: React.FC<SearchBarProps> = ({ setTicker, initialTicker }) => {
                     onChange={(e) => setInputValue(e.target.value)}
                     onFocus={() => setIsFocused(true)}
                     placeholder="Search for a stock..."
-                    className="w-full bg-brand-secondary border border-brand-border rounded-md px-4 py-2 text-brand-text-primary focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors"
                     aria-autocomplete="list"
                     aria-expanded={showResults}
                 />
                 <button
                     type="submit"
-                    className="bg-brand-accent hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300 flex items-center"
+                    className="bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
                     aria-label="Search"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -85,25 +85,26 @@ const SearchBar: React.FC<SearchBarProps> = ({ setTicker, initialTicker }) => {
                 </button>
             </form>
             {showResults && (
-                <div className="absolute z-10 w-full mt-1 bg-brand-secondary border border-brand-border rounded-md shadow-lg max-h-80 overflow-y-auto">
-                    {isLoading && <div className="p-4 text-brand-text-secondary">Searching...</div>}
+                <div className="absolute z-10 w-full mt-2 bg-card border border-border rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                    {isLoading && <div className="p-4 text-text-secondary">Searching...</div>}
                     {searchResults && searchResults.length > 0 && (
                         <ul>
                             {searchResults.map((result) => (
                                 <li
                                     key={result.symbol}
-                                    className="px-4 py-3 hover:bg-brand-primary cursor-pointer"
+                                    className="px-4 py-3 hover:bg-background cursor-pointer"
                                     onClick={() => handleSelectTicker(result)}
                                     onMouseDown={(e) => e.preventDefault()} // Prevent input blur on click
                                 >
-                                    <div className="font-bold text-brand-text-primary">{result.symbol}</div>
-                                    <div className="text-sm text-brand-text-secondary truncate">{result.description}</div>
+                                    <div className="font-bold text-text-primary">{result.symbol}</div>
+                                    <div className="text-sm text-text-secondary truncate">{result.description}</div>
+
                                 </li>
                             ))}
                         </ul>
                     )}
                     {searchResults && searchResults.length === 0 && !isLoading && (
-                         <div className="p-4 text-brand-text-secondary">No results found for "{debouncedSearchTerm}".</div>
+                         <div className="p-4 text-text-secondary">No results found for "{debouncedSearchTerm}".</div>
                     )}
                 </div>
             )}

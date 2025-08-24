@@ -51,12 +51,12 @@ const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
     }, [ticker]);
 
     if (isLoading) {
-        return <SkeletonLoader className="h-28 w-full rounded-lg" />;
+        return <SkeletonLoader className="h-36 w-full rounded-xl" />;
     }
 
     if (isError || !stockData) {
         return (
-            <div className="p-4 bg-brand-secondary rounded-lg border border-red-500/50 text-center text-red-400">
+            <div className="p-6 bg-card rounded-xl border border-negative/50 text-center text-negative">
                 Failed to fetch data for {ticker}. Please check if the ticker is valid.
             </div>
         );
@@ -68,25 +68,41 @@ const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
     const isPositive = change >= 0;
 
     return (
-        <div className="p-4 bg-brand-secondary rounded-lg border border-brand-border">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                <div>
-                    <h2 className="text-3xl font-bold text-white">{stockData.companyName} ({stockData.ticker})</h2>
-                    <div className="flex items-center space-x-4 text-brand-text-secondary text-sm mt-2">
-                        <span>Market Cap: <span className="font-semibold text-brand-text-primary">{formatMarketCap(stockData.marketCap)}</span></span>
-                        {stockData.peRatio && (
-                            <span>P/E Ratio: <span className="font-semibold text-brand-text-primary">{stockData.peRatio.toFixed(2)}</span></span>
-                        )}
-                    </div>
+        <div className="p-4 sm:p-6 bg-card rounded-xl border border-border">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                {/* Left Side: Company Info */}
+                <div className="flex-grow">
+                    <h2 className="text-3xl font-bold text-text-primary">{stockData.companyName}</h2>
+                    <p className="text-lg text-text-secondary">{stockData.ticker}</p>
                 </div>
-                <div className="mt-4 sm:mt-0 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                         <div className={`w-3 h-3 rounded-full transition-colors duration-300 ${isLive ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} title={isLive ? 'Live data' : 'Delayed data'}></div>
-                        <p className="text-4xl font-semibold text-white">${displayPrice.toFixed(2)}</p>
+                
+                {/* Right Side: Price Info */}
+                <div className="text-left md:text-right w-full md:w-auto">
+                    <div className="flex items-center md:justify-end gap-3">
+                         <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${isLive ? 'bg-positive' : 'bg-text-tertiary'}`} title={isLive ? 'Live data' : 'Delayed data'}></div>
+                        <p className="text-4xl font-semibold text-text-primary">${displayPrice.toFixed(2)}</p>
                     </div>
-                    <p className={`text-lg font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className={`text-xl font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
                         {isPositive ? '+' : ''}{change.toFixed(2)} ({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)
                     </p>
+                </div>
+            </div>
+
+            {/* Bottom: Key Stats */}
+            <div className="mt-6 pt-4 border-t border-border flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div className="text-sm">
+                    <span className="text-text-secondary mr-2">Market Cap:</span>
+                    <span className="font-semibold text-text-primary">{formatMarketCap(stockData.marketCap)}</span>
+                </div>
+                {stockData.peRatio && (
+                    <div className="text-sm">
+                        <span className="text-text-secondary mr-2">P/E Ratio:</span>
+                        <span className="font-semibold text-text-primary">{stockData.peRatio.toFixed(2)}</span>
+                    </div>
+                )}
+                 <div className="text-sm">
+                    <span className="text-text-secondary mr-2">Prev. Close:</span>
+                    <span className="font-semibold text-text-primary">${stockData.previousClose.toFixed(2)}</span>
                 </div>
             </div>
         </div>

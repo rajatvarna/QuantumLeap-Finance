@@ -35,34 +35,38 @@ const FundamentalsContent: React.FC<FundamentalsProps> = ({ ticker }) => {
     const years = data?.years;
 
     if (isLoading) {
-        return <SkeletonLoader className="h-64 w-full" />;
+        return (
+            <div className="p-4 sm:p-6 h-full">
+                <SkeletonLoader className="h-full w-full" />
+            </div>
+        );
     }
     
     if (isError) {
-        return <div className="text-center text-red-400 p-4">Could not load fundamental data.</div>;
+        return <div className="text-center text-negative p-4">Could not load fundamental data.</div>;
     }
     
     if (!financials || financials.length === 0 || !years || years.length === 0) {
-        return <div className="text-center text-brand-text-secondary p-4">No fundamental data found.</div>;
+        return <div className="text-center text-text-secondary p-4">No fundamental data found.</div>;
     }
 
     return (
         <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-brand-text-secondary">
-                <thead className="text-xs text-brand-text-primary uppercase bg-brand-primary">
+            <table className="w-full text-sm text-left text-text-secondary">
+                <thead className="text-xs text-text-tertiary uppercase">
                     <tr>
-                        <th scope="col" className="px-4 py-3 whitespace-nowrap">Metric (Annual)</th>
+                        <th scope="col" className="px-6 py-3 font-medium whitespace-nowrap">Metric (Annual)</th>
                         {years.map(year => (
-                            <th key={year} scope="col" className="px-4 py-3 text-right whitespace-nowrap">{year}</th>
+                            <th key={year} scope="col" className="px-6 py-3 font-medium text-right whitespace-nowrap">{year}</th>
                         ))}
                     </tr>
                 </thead>
                 <tbody>
                     {financials.map((row) => (
-                        <tr key={row.metric} className="border-b border-brand-border hover:bg-brand-primary">
-                            <td className="px-4 py-3 font-semibold text-brand-text-primary whitespace-nowrap">{row.metric}</td>
+                        <tr key={row.metric} className="border-b border-border last:border-b-0 hover:bg-background">
+                            <td className="px-6 py-4 font-semibold text-text-primary whitespace-nowrap">{row.metric}</td>
                             {years.map(year => (
-                                <td key={`${row.metric}-${year}`} className="px-4 py-3 text-right whitespace-nowrap">
+                                <td key={`${row.metric}-${year}`} className="px-6 py-4 text-right whitespace-nowrap font-mono">
                                     {formatValue(row.values[year])}
                                 </td>
                             ))}
@@ -76,11 +80,15 @@ const FundamentalsContent: React.FC<FundamentalsProps> = ({ ticker }) => {
 
 const Fundamentals: React.FC<FundamentalsProps> = ({ ticker }) => {
     return (
-        <div className="bg-brand-secondary p-4 rounded-lg border border-brand-border">
-            <h3 className="text-lg font-semibold mb-4 text-white">Fundamental Data</h3>
-            <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
-                <FundamentalsContent ticker={ticker} />
-            </FeatureGate>
+        <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-border">
+                <h3 className="text-lg font-semibold text-text-primary">Fundamental Data</h3>
+            </div>
+            <div className="flex-grow overflow-auto">
+                <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
+                    <FundamentalsContent ticker={ticker} />
+                </FeatureGate>
+            </div>
         </div>
     );
 };

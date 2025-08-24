@@ -40,15 +40,15 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
         }
 
         if (isError) {
-            return <div className="text-center text-red-400 p-4">Could not load news articles.</div>;
+            return <div className="text-center text-negative p-4">Could not load news articles.</div>;
         }
 
         if (!news || news.length === 0) {
-            return <div className="text-center text-brand-text-secondary p-4">No recent news found for this ticker.</div>;
+            return <div className="text-center text-text-secondary p-4">No recent news found for this ticker.</div>;
         }
 
         return (
-             <div ref={parentRef} className="h-[400px] overflow-auto">
+             <div ref={parentRef} className="h-full overflow-auto">
                 <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                     {rowVirtualizer.getVirtualItems().map((virtualItem) => {
                         const article = news[virtualItem.index];
@@ -65,14 +65,14 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
                                     padding: '8px 2px',
                                 }}
                             >
-                                <div className="border-b border-brand-border pb-4 last:border-b-0 h-full">
-                                    <div className="text-xs text-brand-text-secondary mb-1">
+                                <div className="border-b border-border pb-4 last:border-b-0 h-full hover:bg-background/50 rounded-lg p-2 transition-colors">
+                                    <div className="text-xs text-text-tertiary mb-1">
                                         <span>{article.publishedDate}</span> - <span>{article.source}</span>
                                     </div>
-                                    <h4 className="font-semibold text-brand-text-primary hover:text-brand-accent cursor-pointer truncate">
+                                    <h4 className="font-semibold text-text-primary hover:text-accent cursor-pointer truncate">
                                         {article.headline}
                                     </h4>
-                                    <p className="text-sm text-brand-text-secondary mt-1 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                    <p className="text-sm text-text-secondary mt-1 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                                         {article.summary}
                                     </p>
                                 </div>
@@ -85,9 +85,11 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
     };
 
     return (
-        <div className="bg-brand-secondary p-4 rounded-lg border border-brand-border h-full flex flex-col">
-            <h3 className="text-lg font-semibold mb-4 text-white">Latest News</h3>
-            <div className="flex-grow">
+        <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
+             <div className="p-4 sm:p-6 border-b border-border">
+                <h3 className="text-lg font-semibold text-text-primary">Latest News</h3>
+            </div>
+            <div className="flex-grow p-4 sm:p-6 pt-2 sm:pt-2 overflow-hidden">
               {renderContent()}
             </div>
         </div>

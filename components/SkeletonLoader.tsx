@@ -7,7 +7,7 @@ interface SkeletonLoaderProps {
 
 const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ className }) => {
     return (
-        <div className={`bg-gray-700 animate-pulse rounded-md ${className}`}></div>
+        <div className={`bg-white/5 animate-pulse rounded-lg ${className}`}></div>
     );
 };
 

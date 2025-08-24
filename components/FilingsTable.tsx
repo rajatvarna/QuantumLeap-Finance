@@ -22,12 +22,12 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
     const rowVirtualizer = useVirtualizer({
         count: filings?.length ?? 0,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 49, // Estimate row height in pixels
+        estimateSize: () => 53, // Estimate row height in pixels
     });
 
     if (isLoading) {
         return (
-            <div className="space-y-2">
+            <div className="space-y-2 p-4 sm:p-6">
                 {[...Array(5)].map((_, i) => (
                     <SkeletonLoader key={i} className="h-12 w-full" />
                 ))}
@@ -36,22 +36,22 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
     }
     
     if (isError) {
-        return <div className="text-center text-red-400 p-4">Could not load company filings.</div>;
+        return <div className="text-center text-negative p-4">Could not load company filings.</div>;
     }
 
     if (!filings || filings.length === 0) {
-        return <div className="text-center text-brand-text-secondary p-4">No recent filings found.</div>;
+        return <div className="text-center text-text-secondary p-4">No recent filings found.</div>;
     }
 
     return (
-        <div ref={parentRef} className="overflow-auto h-[400px]">
+        <div ref={parentRef} className="overflow-auto h-full">
             <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                <table className="w-full text-sm text-left text-brand-text-secondary">
-                    <thead className="text-xs text-brand-text-primary uppercase bg-brand-secondary" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                <table className="w-full text-sm text-left text-text-secondary">
+                    <thead className="text-xs text-text-tertiary uppercase bg-card" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                         <tr>
-                            <th scope="col" className="px-4 py-3">Date</th>
-                            <th scope="col" className="px-4 py-3">Type</th>
-                            <th scope="col" className="px-4 py-3">Headline</th>
+                            <th scope="col" className="px-6 py-3 font-medium">Date</th>
+                            <th scope="col" className="px-6 py-3 font-medium">Type</th>
+                            <th scope="col" className="px-6 py-3 font-medium">Headline</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -68,14 +68,14 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
                                         height: `${virtualItem.size}px`, 
                                         transform: `translateY(${virtualItem.start}px)` 
                                     }}
-                                    className="border-b border-brand-border hover:bg-brand-primary"
+                                    className="border-b border-border hover:bg-background"
                                 >
-                                    <td className="px-4 py-3 whitespace-nowrap">{filing.date}</td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-6 py-4 whitespace-nowrap">{filing.date}</td>
+                                    <td className="px-6 py-4">
                                         <span className="bg-gray-700 text-gray-300 text-xs font-medium px-2 py-1 rounded-full">{filing.type}</span>
                                     </td>
-                                    <td className="px-4 py-3">
-                                        <a href={filing.link} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-accent hover:underline">
+                                    <td className="px-6 py-4">
+                                        <a href={filing.link} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
                                             {filing.headline}
                                         </a>
                                     </td>
@@ -91,11 +91,15 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
 
 const FilingsTable: React.FC<FilingsTableProps> = ({ ticker }) => {
     return (
-        <div className="bg-brand-secondary p-4 rounded-lg border border-brand-border">
-            <h3 className="text-lg font-semibold mb-4 text-white">Recent Filings</h3>
-            <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
-                <FilingsTableContent ticker={ticker} />
-            </FeatureGate>
+        <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
+             <div className="p-4 sm:p-6 border-b border-border">
+                <h3 className="text-lg font-semibold text-text-primary">Recent Filings</h3>
+            </div>
+            <div className="flex-grow overflow-hidden">
+                <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
+                    <FilingsTableContent ticker={ticker} />
+                </FeatureGate>
+            </div>
         </div>
     );
 };
