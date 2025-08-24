@@ -31,6 +31,7 @@ export interface StockData {
     price: number;
     change: number;
     changePercent: number;
+    previousClose: number;
 }
 
 export interface AnnualReport {

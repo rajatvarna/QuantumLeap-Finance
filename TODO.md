@@ -20,7 +20,7 @@
 -   [x] **~~Introduce a Server State Management Library~~**
     -   **Status:** **Done.** Integrated **TanStack Query (React Query)** across all data-fetching components (`StockHeader`, `FilingsTable`, `NewsFeed`, `Fundamentals`). Manual `useEffect`/`useState` logic for server state has been removed.
 
--   [ ] **Implement Real Authentication Flow**
+-   [ ] **Implement Real Authentication Flow (CRITICAL)**
     -   **Action:** Refactor the mock authentication to connect to a real backend.
     -   **Files Affected:**
         -   `hooks/useAuth.tsx`: Modify the `login` function to call a `/login` endpoint and store a JWT. The `user` state should be derived from the token or a `/me` endpoint. The `togglePlan` function should be removed.
@@ -37,15 +37,12 @@
 
 -   [x] **~~Enhance Search Bar with Autocomplete~~**
      -   **Status:** **Done.** The `SearchBar.tsx` component now includes a real-time, debounced autocomplete search feature.
+     
+-   [x] **~~Implement List Virtualization~~**
+    -   **Status:** **Done.** `FilingsTable.tsx` and `NewsFeed.tsx` now use **TanStack Virtual** to efficiently render long lists, ensuring a smooth scrolling experience.
 
--   [ ] **Implement List Virtualization (CRITICAL)**
-    -   **Action:** Re-implement the list rendering logic using a virtualization library like **TanStack Virtual**.
-    -   **Reason:** This is the most critical performance optimization remaining. The current `.map()` implementation will crash the browser when rendering thousands of real filings or news articles.
-    -   **Files Affected:** `components/FilingsTable.tsx`, `components/NewsFeed.tsx`.
-
--   [ ] **Integrate WebSocket for Real-Time Price Updates**
-    -   **Action:** Use Finnhub's WebSocket API to get live price ticks and update the `StockHeader` component in real-time without needing to refresh the page.
-    -   **Files Affected:** `components/StockHeader.tsx`, `services/finnhubService.ts`.
+-   [x] **~~Integrate WebSocket for Real-Time Price Updates~~**
+    -   **Status:** **Done.** A `WebSocketManager` has been implemented in `services/finnhubService.ts` and integrated into `components/StockHeader.tsx` to provide live, ticking price updates.
 
 ---
 

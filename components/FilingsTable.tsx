@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchFilings } from '../services/finnhubService';
 import type { Filing } from '../types';
 import { SubscriptionPlan } from '../types';
@@ -14,6 +15,14 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
     const { data: filings, isLoading, isError } = useQuery<Filing[], Error>({
         queryKey: ['filings', ticker],
         queryFn: () => fetchFilings(ticker),
+    });
+
+    const parentRef = React.useRef<HTMLDivElement>(null);
+
+    const rowVirtualizer = useVirtualizer({
+        count: filings?.length ?? 0,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 49, // Estimate row height in pixels
     });
 
     if (isLoading) {
@@ -35,31 +44,47 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
     }
 
     return (
-        <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-brand-text-secondary">
-                <thead className="text-xs text-brand-text-primary uppercase bg-brand-primary">
-                    <tr>
-                        <th scope="col" className="px-4 py-3">Date</th>
-                        <th scope="col" className="px-4 py-3">Type</th>
-                        <th scope="col" className="px-4 py-3">Headline</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {filings.map((filing, index) => (
-                        <tr key={index} className="border-b border-brand-border hover:bg-brand-primary">
-                            <td className="px-4 py-3 whitespace-nowrap">{filing.date}</td>
-                            <td className="px-4 py-3">
-                                <span className="bg-gray-700 text-gray-300 text-xs font-medium px-2 py-1 rounded-full">{filing.type}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                                <a href={filing.link} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-accent hover:underline">
-                                    {filing.headline}
-                                </a>
-                            </td>
+        <div ref={parentRef} className="overflow-auto h-[400px]">
+            <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
+                <table className="w-full text-sm text-left text-brand-text-secondary">
+                    <thead className="text-xs text-brand-text-primary uppercase bg-brand-secondary" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                        <tr>
+                            <th scope="col" className="px-4 py-3">Date</th>
+                            <th scope="col" className="px-4 py-3">Type</th>
+                            <th scope="col" className="px-4 py-3">Headline</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                            const filing = filings[virtualItem.index];
+                            return (
+                                <tr 
+                                    key={virtualItem.key} 
+                                    style={{ 
+                                        position: 'absolute', 
+                                        top: 0, 
+                                        left: 0, 
+                                        width: '100%', 
+                                        height: `${virtualItem.size}px`, 
+                                        transform: `translateY(${virtualItem.start}px)` 
+                                    }}
+                                    className="border-b border-brand-border hover:bg-brand-primary"
+                                >
+                                    <td className="px-4 py-3 whitespace-nowrap">{filing.date}</td>
+                                    <td className="px-4 py-3">
+                                        <span className="bg-gray-700 text-gray-300 text-xs font-medium px-2 py-1 rounded-full">{filing.type}</span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <a href={filing.link} target="_blank" rel="noopener noreferrer" className="font-medium text-brand-accent hover:underline">
+                                            {filing.headline}
+                                        </a>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };

@@ -5,93 +5,116 @@ const BASE_URL = 'https://finnhub.io/api/v1';
 
 async function apiFetch<T>(endpoint: string): Promise<T | null> {
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}&token=${API_KEY}`);
+        // Robustly append the API token
+        const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${API_KEY}`;
+        const response = await fetch(url);
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`Finnhub API error: ${response.status} ${response.statusText}`, errorText);
-            // Propagate a specific error message if possible
-            throw new Error(`Finnhub API error for ${endpoint}: ${response.status} ${response.statusText}`);
+            return null;
         }
         return await response.json() as T;
     } catch (error) {
         console.error("Error fetching from Finnhub API:", error);
-        throw error; // Re-throw the error so React Query can handle it
+        return null;
     }
 }
 
-interface FinnhubQuote {
-    c: number; // current price
-    d: number; // change
-    dp: number; // percent change
-    h: number; // high
-    l: number; // low
-    o: number; // open
-    pc: number; // previous close
-}
+// --- WebSocket Manager for Live Data ---
 
-interface FinnhubProfile {
-    country: string;
-    currency: string;
-    exchange: string;
-    ipo: string;
-    marketCapitalization: number;
-    name: string;
-    phone: string;
-    shareOutstanding: number;
-    ticker: string;
-    weburl: string;
-    logo: string;
-    finnhubIndustry: string;
-}
+type PriceUpdateCallback = (price: number) => void;
 
-interface FinnhubFiling {
-    accessNumber: string;
-    symbol: string;
-    cik: string;
-    form: string;
-    filedDate: string;
-    acceptedDate: string;
-    reportUrl: string;
-    filingUrl: string;
-}
+class WebSocketManager {
+    private socket: WebSocket | null = null;
+    private subscriptions: Map<string, PriceUpdateCallback> = new Map();
+    private isConnected: boolean = false;
+    private reconnectAttempts: number = 0;
+    private maxReconnectAttempts: number = 5;
 
-interface FinnhubNews {
-    category: string;
-    datetime: number; // Unix timestamp
-    headline: string;
-    id: number;
-    image: string;
-    related: string;
-    source: string;
-    summary: string;
-    url: string;
-}
+    constructor() {
+        this.connect();
+    }
 
-interface FinnhubFinancialsReport {
-    endDate: string;
-    year: number;
-    report: {
-        bs: { concept: string; label: string; unit: string; value: number }[];
-        cf: { concept: string; label: string; unit: string; value: number }[];
-        ic: { concept: string; label: string; unit: string; value: number }[];
+    private connect() {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) return;
+
+        this.socket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
+
+        this.socket.onopen = () => {
+            console.log('WebSocket connected');
+            this.isConnected = true;
+            this.reconnectAttempts = 0;
+            // Resubscribe to all symbols on successful connection
+            this.subscriptions.forEach((_, symbol) => {
+                this.socket?.send(JSON.stringify({ type: 'subscribe', symbol }));
+            });
+        };
+
+        this.socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'trade' && message.data) {
+                message.data.forEach((trade: { s: string; p: number; t: number }) => {
+                    if (this.subscriptions.has(trade.s)) {
+                        this.subscriptions.get(trade.s)?.(trade.p);
+                    }
+                });
+            }
+        };
+
+        this.socket.onclose = () => {
+            console.log('WebSocket disconnected');
+            this.isConnected = false;
+            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                setTimeout(() => {
+                    this.reconnectAttempts++;
+                    console.log(`WebSocket reconnecting... attempt ${this.reconnectAttempts}`);
+                    this.connect();
+                }, 1000 * this.reconnectAttempts); // Exponential backoff
+            } else {
+                console.error('WebSocket max reconnect attempts reached.');
+            }
+        };
+
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            this.socket?.close();
+        };
+    }
+
+    public subscribe(symbol: string, callback: PriceUpdateCallback) {
+        if (this.isConnected && this.socket?.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type: 'subscribe', symbol }));
+        }
+        this.subscriptions.set(symbol, callback);
+    }
+
+    public unsubscribe(symbol: string) {
+        if (this.isConnected && this.socket?.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type: 'unsubscribe', symbol }));
+        }
+        this.subscriptions.delete(symbol);
     }
 }
-interface FinnhubFinancials {
-    data: FinnhubFinancialsReport[];
-    symbol: string;
-}
 
-interface FinnhubSearch {
-    count: number;
-    result: SearchResult[];
-}
+export const webSocketManager = new WebSocketManager();
+
+
+// --- REST API Functions ---
+
+interface FinnhubQuote { c: number; d: number; dp: number; h: number; l: number; o: number; pc: number; }
+interface FinnhubProfile { country: string; currency: string; exchange: string; ipo: string; marketCapitalization: number; name: string; phone: string; shareOutstanding: number; ticker: string; weburl: string; logo: string; finnhubIndustry: string; }
+interface FinnhubFiling { accessNumber: string; symbol: string; cik: string; form: string; filedDate: string; acceptedDate: string; reportUrl: string; filingUrl: string; }
+interface FinnhubNews { category: string; datetime: number; headline: string; id: number; image: string; related: string; source: string; summary: string; url: string; }
+interface FinnhubFinancialsReport { endDate: string; year: number; report: { bs: any[]; cf: any[]; ic: any[]; } }
+interface FinnhubFinancials { data: FinnhubFinancialsReport[]; symbol: string; }
+interface FinnhubSearch { count: number; result: SearchResult[]; }
+
 
 export const searchSymbols = async (query: string): Promise<SearchResult[]> => {
     if (!query) return [];
     const response = await apiFetch<FinnhubSearch>(`/search?q=${query}`);
     return response?.result || [];
 };
-
 
 export const fetchStockData = async (ticker: string): Promise<StockData> => {
     const [quote, profile] = await Promise.all([
@@ -110,6 +133,7 @@ export const fetchStockData = async (ticker: string): Promise<StockData> => {
         price: quote.c,
         change: quote.d,
         changePercent: quote.dp,
+        previousClose: quote.pc,
     };
 };
 
@@ -117,8 +141,8 @@ export const fetchFilings = async (ticker: string): Promise<Filing[]> => {
     const filings = await apiFetch<FinnhubFiling[]>(`/stock/filings?symbol=${ticker}`);
     if (!filings) return [];
 
-    return filings.slice(0, 15).map(f => ({
-        date: f.filedDate.split(' ')[0], // Keep only the date part
+    return filings.slice(0, 100).map(f => ({ // Fetch more for virtualization
+        date: f.filedDate.split(' ')[0],
         type: f.form,
         link: f.filingUrl,
         headline: `Form ${f.form} filed on ${f.filedDate}`,
@@ -131,14 +155,12 @@ const formatDate = (unixTimestamp: number): string => {
 };
 
 export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
-    // Get today's and 30 days ago dates in YYYY-MM-DD format
     const to = new Date().toISOString().split('T')[0];
     const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
     const news = await apiFetch<FinnhubNews[]>(`/company-news?symbol=${ticker}&from=${from}&to=${to}`);
     if (!news) return [];
 
-    return news.slice(0, 10).map(n => ({
+    return news.slice(0, 50).map(n => ({ // Fetch more for virtualization
         publishedDate: formatDate(n.datetime),
         source: n.source,
         headline: n.headline,
@@ -162,7 +184,7 @@ export const fetchFinancials = async (ticker: string): Promise<{ reports: Annual
         return { reports: [], years: [] };
     }
 
-    const reports = financials.data.slice(0, 10).reverse(); // Oldest to newest, max 10
+    const reports = financials.data.slice(0, 10).reverse();
     const years = reports.map(r => r.year.toString());
     
     const processedData: { [metric: string]: { [year: string]: number } } = {};
@@ -171,7 +193,7 @@ export const fetchFinancials = async (ticker: string): Promise<{ reports: Annual
         processedData[metric.name] = {};
         reports.forEach(reportData => {
             const reportSection = reportData.report[metric.report as keyof typeof reportData.report];
-            const metricData = reportSection.find(item => item.concept === metric.concept);
+            const metricData = reportSection?.find(item => item.concept === metric.concept);
             processedData[metric.name][reportData.year] = metricData?.value ?? 0;
         });
     });
