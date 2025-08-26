@@ -44,14 +44,29 @@ export interface StockData {
     website?: string;
 }
 
-export interface AnnualReport {
-    metric: string;
-    values: { [year: string]: number | string };
-}
-
 export interface SearchResult {
     description: string;
     displaySymbol: string;
     symbol: string;
     type: string;
+}
+
+// Types for the new FinancialsView component
+export type FinancialReportData = {
+    [year: string]: number | string;
+};
+
+export interface FinancialReportRow {
+    metric: string;
+    values: FinancialReportData;
+    isSubheader?: boolean;
+}
+
+export interface DetailedFinancials {
+    years: string[];
+    incomeStatement: FinancialReportRow[];
+    balanceSheet: FinancialReportRow[];
+    cashFlowStatement: FinancialReportRow[];
+    ratios: FinancialReportRow[];
+    multiples: FinancialReportRow[];
 }

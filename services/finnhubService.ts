@@ -1,4 +1,4 @@
-import type { Filing, NewsArticle, StockData, AnnualReport, SearchResult } from '../types';
+import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow } from '../types';
 
 const API_KEY = 'd2hfijpr01qon4ec0eu0d2hfijpr01qon4ec0eug';
 const BASE_URL = 'https://finnhub.io/api/v1';
@@ -108,6 +108,7 @@ interface FinnhubNews { category: string; datetime: number; headline: string; id
 interface FinnhubFinancialsReport { endDate: string; year: number; report: { bs: any[]; cf: any[]; ic: any[]; } }
 interface FinnhubFinancials { data: FinnhubFinancialsReport[]; symbol: string; }
 interface FinnhubSearch { count: number; result: SearchResult[]; }
+interface FinnhubMetrics { metric: Record<string, any>; series: { annual: Record<string, any[]> }; }
 
 
 export const searchSymbols = async (query: string): Promise<SearchResult[]> => {
@@ -172,40 +173,110 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
     }));
 };
 
-const METRIC_CONFIG = [
-    { name: 'Revenue', concept: 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax', report: 'ic' },
-    { name: 'Net Income', concept: 'us-gaap_NetIncomeLoss', report: 'ic' },
-    { name: 'Basic EPS', concept: 'us-gaap_EarningsPerShareBasic', report: 'ic' },
-    { name: 'Total Assets', concept: 'us-gaap_Assets', report: 'bs' },
-    { name: 'Total Liabilities', concept: 'us-gaap_Liabilities', report: 'bs' },
-    { name: 'Operating Cash Flow', concept: 'us-gaap_NetCashProvidedByUsedInOperatingActivities', report: 'cf' },
-];
+const STATEMENT_CONFIG = {
+    incomeStatement: [
+        { name: 'Revenue', concepts: ['us-gaap_Revenues', 'us-gaap_SalesRevenueNet', 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax'], report: 'ic' },
+        { name: 'Cost of Revenue', concepts: ['us-gaap_CostOfRevenue', 'us-gaap_CostOfGoodsAndServicesSold'], report: 'ic' },
+        { name: 'Gross Profit', concepts: ['us-gaap_GrossProfit'], report: 'ic' },
+        { name: 'Operating Income', concepts: ['us-gaap_OperatingIncomeLoss'], report: 'ic' },
+        { name: 'Net Income', concepts: ['us-gaap_NetIncomeLoss'], report: 'ic' },
+        { name: 'Basic EPS', concepts: ['us-gaap_EarningsPerShareBasic'], report: 'ic' },
+    ],
+    balanceSheet: [
+        { name: 'Total Assets', concepts: ['us-gaap_Assets'], report: 'bs' },
+        { name: 'Total Liabilities', concepts: ['us-gaap_Liabilities'], report: 'bs' },
+        { name: 'Total Equity', concepts: ['us-gaap_StockholdersEquity', 'us-gaap_LiabilitiesAndStockholdersEquity'], report: 'bs' },
+    ],
+    cashFlowStatement: [
+        { name: 'Operating Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInOperatingActivities'], report: 'cf' },
+        { name: 'Investing Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInInvestingActivities'], report: 'cf' },
+        { name: 'Financing Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInFinancingActivities'], report: 'cf' },
+    ],
+};
 
-export const fetchFinancials = async (ticker: string): Promise<{ reports: AnnualReport[], years: string[] }> => {
-    const financials = await apiFetch<FinnhubFinancials>(`/stock/financials-reported?symbol=${ticker}&freq=annual`);
+const METRIC_CONFIG = {
+    ratios: [
+        { name: 'Current Ratio', key: 'currentRatio' },
+        { name: 'Debt/Equity', key: 'debtToEquity' },
+        { name: 'Return on Equity (ROE)', key: 'roe' },
+        { name: 'Return on Assets (ROA)', key: 'roa' },
+        { name: 'Net Profit Margin', key: 'netProfitMargin' },
+    ],
+    multiples: [
+        { name: 'Price/Earnings (P/E)', key: 'pe' },
+        { name: 'Price/Sales (P/S)', key: 'ps' },
+        { name: 'Price/Book (P/B)', key: 'pb' },
+        { name: 'EV/Sales', key: 'evToSales' },
+        { name: 'EV/EBITDA', key: 'evToEbitda' },
+    ],
+};
+
+export const fetchDetailedFinancialsAndMetrics = async (ticker: string): Promise<DetailedFinancials> => {
+    const [financials, metrics] = await Promise.all([
+        apiFetch<FinnhubFinancials>(`/stock/financials-reported?symbol=${ticker}&freq=annual`),
+        apiFetch<FinnhubMetrics>(`/stock/metric?symbol=${ticker}&metric=all`)
+    ]);
+
+    const result: DetailedFinancials = {
+        years: [],
+        incomeStatement: [],
+        balanceSheet: [],
+        cashFlowStatement: [],
+        ratios: [],
+        multiples: [],
+    };
 
     if (!financials || !financials.data || financials.data.length === 0) {
-        return { reports: [], years: [] };
+        return result;
     }
-
+    
     const reports = financials.data.slice(0, 10).reverse();
     const years = reports.map(r => r.year.toString());
-    
-    const processedData: { [metric: string]: { [year: string]: number } } = {};
+    result.years = years;
 
-    METRIC_CONFIG.forEach(metric => {
-        processedData[metric.name] = {};
-        reports.forEach(reportData => {
-            const reportSection = reportData.report[metric.report as keyof typeof reportData.report];
-            const metricData = reportSection?.find(item => item.concept === metric.concept);
-            processedData[metric.name][reportData.year] = metricData?.value ?? 0;
+    const processSection = (section: keyof typeof STATEMENT_CONFIG): FinancialReportRow[] => {
+        return STATEMENT_CONFIG[section].map(metric => {
+            const row: FinancialReportRow = { metric: metric.name, values: {} };
+            reports.forEach(reportData => {
+                const reportSection = reportData.report[metric.report as keyof typeof reportData.report];
+                let metricData = null;
+                for (const concept of metric.concepts) {
+                    metricData = reportSection?.find(item => item.concept === concept);
+                    if (metricData) break;
+                }
+                 row.values[reportData.year] = metricData?.value ?? '--';
+            });
+            return row;
         });
-    });
-    
-    const annualReports: AnnualReport[] = METRIC_CONFIG.map(metric => ({
-        metric: metric.name,
-        values: processedData[metric.name]
-    }));
+    };
 
-    return { reports: annualReports, years };
+    result.incomeStatement = processSection('incomeStatement');
+    result.balanceSheet = processSection('balanceSheet');
+    result.cashFlowStatement = processSection('cashFlowStatement');
+
+    if (metrics && metrics.series && metrics.series.annual) {
+        const processMetrics = (section: keyof typeof METRIC_CONFIG): FinancialReportRow[] => {
+            return METRIC_CONFIG[section].map(metric => {
+                const row: FinancialReportRow = { metric: metric.name, values: {} };
+                const metricSeries = metrics.series.annual[metric.key];
+                if (metricSeries) {
+                    metricSeries.forEach(dataPoint => {
+                        if(years.includes(dataPoint.period.substring(0,4))) {
+                            row.values[dataPoint.period.substring(0,4)] = dataPoint.v;
+                        }
+                    });
+                }
+                years.forEach(year => {
+                    if(!(year in row.values)) {
+                        row.values[year] = '--';
+                    }
+                });
+                return row;
+            });
+        };
+        result.ratios = processMetrics('ratios');
+        result.multiples = processMetrics('multiples');
+    }
+
+    return result;
 };
