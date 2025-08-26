@@ -134,6 +134,10 @@ export const fetchStockData = async (ticker: string): Promise<StockData> => {
         change: quote.d,
         changePercent: quote.dp,
         previousClose: quote.pc,
+        logo: profile.logo,
+        exchange: profile.exchange,
+        industry: profile.finnhubIndustry,
+        website: profile.weburl,
     };
 };
 

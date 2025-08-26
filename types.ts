@@ -38,6 +38,10 @@ export interface StockData {
     change: number;
     changePercent: number;
     previousClose: number;
+    logo?: string;
+    exchange?: string;
+    industry?: string;
+    website?: string;
 }
 
 export interface AnnualReport {
