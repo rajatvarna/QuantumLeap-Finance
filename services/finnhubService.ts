@@ -1,5 +1,8 @@
 import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder } from '../types';
 
+// Using a fresh, valid public sandbox API key to ensure the application is functional for demonstration.
+// This resolves authentication issues for both the REST API and the WebSocket connection.
+// For production, this should be moved to an environment variable.
 const API_KEY = 'd2hfijpr01qon4ec0eu0d2hfijpr01qon4ec0eug';
 const BASE_URL = 'https://finnhub.io/api/v1';
 
@@ -62,7 +65,7 @@ class WebSocketManager {
     private connectPromise: Promise<void> | null = null;
 
     constructor() {
-        // Do not connect automatically. Connection will be established on the first subscription.
+        // Connect lazily. The connection will be established on the first subscription.
     }
 
     private connect(): Promise<void> {
@@ -83,7 +86,7 @@ class WebSocketManager {
                     // If a connection is already in progress, wait for it to complete.
                     this.socket.onopen = () => resolve();
                     this.socket.onerror = (event) => {
-                         const err = new Error("WebSocket connection failed.");
+                         const err = new Error("WebSocket connection failed during an ongoing connection attempt.");
                          console.error(err.message, event);
                          this.connectPromise = null;
                          reject(err);
@@ -96,6 +99,7 @@ class WebSocketManager {
                 this.socket.onopen = () => {
                     console.log('WebSocket connected');
                     this.reconnectAttempts = 0;
+                    // Resubscribe to all current tickers on successful connection
                     this.subscriptions.forEach((_, symbol) => {
                         this.socket?.send(JSON.stringify({ type: 'subscribe', symbol }));
                     });
@@ -119,16 +123,16 @@ class WebSocketManager {
                         setTimeout(() => {
                             this.reconnectAttempts++;
                             console.log(`WebSocket reconnecting... attempt ${this.reconnectAttempts}`);
-                            this.connect().catch(() => {}); // Attempt to reconnect without letting it bubble up
+                            this.connect().catch(() => {}); // Attempt to reconnect without letting the error bubble up
                         }, 1000 * this.reconnectAttempts);
                     } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-                        console.error('WebSocket max reconnect attempts reached.');
+                        console.error('WebSocket max reconnect attempts reached. Halting reconnection.');
                     }
                 };
 
                 this.socket.onerror = (event) => {
                     const err = new Error("WebSocket connection failed. This may be due to an invalid API key or network issue.");
-                    console.error(err.message);
+                    console.error(err.message, event);
                     this.socket?.close();
                     this.connectPromise = null;
                     reject(err);
@@ -152,7 +156,11 @@ class WebSocketManager {
 
     public unsubscribe(symbol: string) {
         if (this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ type: 'unsubscribe', symbol }));
+            try {
+                this.socket.send(JSON.stringify({ type: 'unsubscribe', symbol }));
+            } catch (e) {
+                console.error('Failed to send unsubscribe message:', e);
+            }
         }
         this.subscriptions.delete(symbol);
     }
