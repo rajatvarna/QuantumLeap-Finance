@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchNews } from '../services/finnhubService';
@@ -29,8 +29,7 @@ const escapeCsvValue = (value: any): string => {
 const SentimentAnalysis: React.FC<{
     data: SentimentAnalysisResult | null | undefined,
     isLoading: boolean,
-    isError: boolean
-}> = ({ data, isLoading, isError }) => {
+}> = ({ data, isLoading }) => {
     if (isLoading) {
         return (
             <div className="px-4 sm:px-6 py-4 border-t border-border">
@@ -42,8 +41,7 @@ const SentimentAnalysis: React.FC<{
     }
 
     // Fail gracefully by showing nothing if there's an error or no data.
-    // This is an enhancement, not a critical feature.
-    if (isError || !data) {
+    if (!data) {
         return null; 
     }
 
@@ -86,18 +84,17 @@ const SentimentAnalysis: React.FC<{
 
 
 const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
-    const { data: news, isLoading, isError } = useQuery<NewsArticle[], Error>({
+    const { data: news, isLoading: isLoadingNews, isError: isErrorNews } = useQuery<NewsArticle[], Error>({
         queryKey: ['news', ticker],
         queryFn: () => fetchNews(ticker),
     });
 
-    // Perform sentiment analysis on the client side once news is fetched.
-    // useMemo ensures this only recalculates when the news data changes.
-    const sentimentData = useMemo(() => {
-        if (news && news.length > 0) {
-            return analyzeNewsSentiment(news);
+    // Derive sentiment data directly from news articles using synchronous, client-side analysis.
+    const sentimentData = React.useMemo(() => {
+        if (!news || news.length === 0) {
+            return null;
         }
-        return null;
+        return analyzeNewsSentiment(news);
     }, [news]);
 
 
@@ -132,7 +129,7 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
     };
 
     const renderContent = () => {
-        if (isLoading) {
+        if (isLoadingNews) {
             return (
                 <div className="space-y-4">
                     {[...Array(5)].map((_, i) => (
@@ -146,7 +143,7 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
             );
         }
 
-        if (isError) {
+        if (isErrorNews) {
             return <div className="text-center text-negative p-4">Could not load news articles.</div>;
         }
 
@@ -211,8 +208,7 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
              <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
                 <SentimentAnalysis
                     data={sentimentData}
-                    isLoading={isLoading}
-                    isError={isError}
+                    isLoading={isLoadingNews}
                 />
             </FeatureGate>
             <div className="flex-grow p-4 sm:p-6 pt-0 overflow-hidden">
