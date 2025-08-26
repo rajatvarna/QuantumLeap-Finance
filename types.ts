@@ -38,6 +38,7 @@ export interface StockData {
     change: number;
     changePercent: number;
     previousClose: number;
+    shareOutstanding?: number;
     logo?: string;
     exchange?: string;
     industry?: string;
@@ -69,4 +70,19 @@ export interface DetailedFinancials {
     cashFlowStatement: FinancialReportRow[];
     ratios: FinancialReportRow[];
     multiples: FinancialReportRow[];
+}
+
+export interface Transcript {
+    id: string;
+    title: string;
+    time: string;
+    year: number;
+    quarter: number;
+}
+
+export interface Shareholder {
+    name: string;
+    share: number;
+    change: number;
+    filingDate: string;
 }

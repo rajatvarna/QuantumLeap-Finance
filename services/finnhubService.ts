@@ -1,24 +1,38 @@
-import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow } from '../types';
+import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Transcript, Shareholder } from '../types';
 
 const API_KEY = 'd2hfijpr01qon4ec0eu0d2hfijpr01qon4ec0eug';
 const BASE_URL = 'https://finnhub.io/api/v1';
 
 async function apiFetch<T>(endpoint: string): Promise<T | null> {
     try {
-        // Robustly append the API token
         const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${API_KEY}`;
         const response = await fetch(url);
+
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`Finnhub API error: ${response.status} ${response.statusText}`, errorText);
+            console.error(`Finnhub API HTTP error: ${response.status} ${response.statusText}`, errorText);
             return null;
         }
+
+        // Add a check for the Content-Type header.
+        // Some issues (like an invalid API key) can cause Finnhub to return a 200 OK with an HTML error page.
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            const responseText = await response.text();
+            console.error("Finnhub API did not return JSON. This may be due to an invalid API key, rate limiting, or a server issue. Response snippet:", responseText.substring(0, 500));
+            // Return null, consistent with the function's error handling contract.
+            return null;
+        }
+        
+        // Only try to parse as JSON if the content type is correct.
         return await response.json() as T;
     } catch (error) {
-        console.error("Error fetching from Finnhub API:", error);
+        // This catch block now primarily handles network errors (e.g., failed to fetch) or other unexpected issues.
+        console.error("Network or unexpected error in apiFetch:", error);
         return null;
     }
 }
+
 
 // --- WebSocket Manager for Live Data ---
 
@@ -109,6 +123,9 @@ interface FinnhubFinancialsReport { endDate: string; year: number; report: { bs:
 interface FinnhubFinancials { data: FinnhubFinancialsReport[]; symbol: string; }
 interface FinnhubSearch { count: number; result: SearchResult[]; }
 interface FinnhubMetrics { metric: Record<string, any>; series: { annual: Record<string, any[]> }; }
+interface FinnhubTranscriptList { symbol: string; transcripts: Transcript[]; }
+interface FinnhubShareholderData { name: string; share: number; change: number; filingDate: string; }
+interface FinnhubShareholders { symbol: string; data: FinnhubShareholderData[]; }
 
 
 export const searchSymbols = async (query: string): Promise<SearchResult[]> => {
@@ -135,6 +152,7 @@ export const fetchStockData = async (ticker: string): Promise<StockData> => {
         change: quote.d,
         changePercent: quote.dp,
         previousClose: quote.pc,
+        shareOutstanding: profile.shareOutstanding,
         logo: profile.logo,
         exchange: profile.exchange,
         industry: profile.finnhubIndustry,
@@ -173,6 +191,16 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
     }));
 };
 
+export const fetchTranscripts = async (ticker: string): Promise<Transcript[]> => {
+    const response = await apiFetch<FinnhubTranscriptList>(`/stock/transcript/list?symbol=${ticker}`);
+    return response?.transcripts || [];
+};
+
+export const fetchShareholders = async (ticker: string): Promise<Shareholder[]> => {
+    const response = await apiFetch<FinnhubShareholders>(`/stock/institutional-ownership?symbol=${ticker}&from=1900-01-01`);
+    return response?.data || [];
+};
+
 const STATEMENT_CONFIG = {
     incomeStatement: [
         { name: 'Revenue', concepts: ['us-gaap_Revenues', 'us-gaap_SalesRevenueNet', 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax'], report: 'ic' },
@@ -188,9 +216,9 @@ const STATEMENT_CONFIG = {
         { name: 'Total Equity', concepts: ['us-gaap_StockholdersEquity', 'us-gaap_LiabilitiesAndStockholdersEquity'], report: 'bs' },
     ],
     cashFlowStatement: [
-        { name: 'Operating Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInOperatingActivities'], report: 'cf' },
-        { name: 'Investing Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInInvestingActivities'], report: 'cf' },
-        { name: 'Financing Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInFinancingActivities'], report: 'cf' },
+        { name: 'Operating Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInOperatingActivities', 'ifrs-full_CashFlowsFromUsedInOperatingActivities'], report: 'cf' },
+        { name: 'Investing Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInInvestingActivities', 'ifrs-full_CashFlowsFromUsedInInvestingActivities'], report: 'cf' },
+        { name: 'Financing Cash Flow', concepts: ['us-gaap_NetCashProvidedByUsedInFinancingActivities', 'ifrs-full_CashFlowsFromUsedInFinancingActivities'], report: 'cf' },
     ],
 };
 

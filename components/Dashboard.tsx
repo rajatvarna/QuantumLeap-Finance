@@ -5,6 +5,9 @@ import FilingsTable from './FilingsTable';
 import NewsFeed from './NewsFeed';
 import CompanyOverview from './CompanyOverview';
 import FinancialsView from './FinancialsView';
+import TranscriptsView from './TranscriptsView';
+import ShareholdersView from './ShareholdersView';
+
 
 interface DashboardProps {
     ticker: string;
@@ -13,20 +16,27 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
     const [activeTab, setActiveTab] = useState('Overview');
 
-    const tabs = ['Overview', 'Financials'];
+    const tabs = ['Overview', 'Financials', 'Transcripts', 'Shareholders'];
 
     const renderTabContent = () => {
         switch (activeTab) {
             case 'Financials':
                 return <FinancialsView ticker={ticker} />;
+            case 'Transcripts':
+                return <TranscriptsView ticker={ticker} />;
+            case 'Shareholders':
+                return <ShareholdersView ticker={ticker} />;
             case 'Overview':
             default:
                 return (
                     <div className="space-y-8">
                         <CompanyOverview ticker={ticker} />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <StockChart ticker={ticker} />
                             <NewsFeed ticker={ticker} />
+                        </div>
+                        <div className="grid grid-cols-1">
+                             <FilingsTable ticker={ticker} />
                         </div>
                     </div>
                 );
@@ -38,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             <StockHeader ticker={ticker} />
 
             <div className="border-b border-border">
-                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
                     {tabs.map((tab) => (
                         <button
                             key={tab}
