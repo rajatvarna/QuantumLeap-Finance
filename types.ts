@@ -23,6 +23,12 @@ export interface NewsArticle {
     summary: string;
 }
 
+export interface SentimentAnalysisResult {
+    overallSentiment: 'Positive' | 'Negative' | 'Neutral';
+    sentimentScore: number;
+    summary: string;
+}
+
 export interface StockData {
     ticker: string;
     companyName: string;

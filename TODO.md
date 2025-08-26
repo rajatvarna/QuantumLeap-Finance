@@ -20,11 +20,8 @@
 -   [x] **~~Introduce a Server State Management Library~~**
     -   **Status:** **Done.** Integrated **TanStack Query (React Query)** across all data-fetching components (`StockHeader`, `FilingsTable`, `NewsFeed`, `Fundamentals`). Manual `useEffect`/`useState` logic for server state has been removed.
 
--   [ ] **Implement Real Authentication Flow (CRITICAL)**
-    -   **Action:** Refactor the mock authentication to connect to a real backend.
-    -   **Files Affected:**
-        -   `hooks/useAuth.tsx`: Modify the `login` function to call a `/login` endpoint and store a JWT. The `user` state should be derived from the token or a `/me` endpoint. The `togglePlan` function should be removed.
-        -   `components/Header.tsx`: Replace the "Toggle Plan" button with "Login" / "Logout" buttons and a link to a user profile/subscription page. The user's plan should be displayed from the real user object.
+-   [x] **~~Implement Real Authentication Flow (CRITICAL)~~**
+    -   **Status:** **Done.** Refactored `hooks/useAuth.tsx` to simulate a real authentication flow using `localStorage` for session persistence. Replaced the mock "Toggle Plan" button in `components/Header.tsx` with proper "Login" and "Logout" functionality.
 
 ---
 

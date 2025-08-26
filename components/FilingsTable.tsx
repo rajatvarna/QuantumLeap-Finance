@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchFilings } from '../services/finnhubService';
@@ -11,11 +11,70 @@ interface FilingsTableProps {
     ticker: string;
 }
 
-const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
+const DownloadIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+);
+
+const escapeCsvValue = (value: any): string => {
+    const stringValue = String(value ?? '').trim();
+    if (/[",\n]/.test(stringValue)) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+    return stringValue;
+};
+
+interface FilingsTableContentProps extends FilingsTableProps {
+    setHeaderActions: (node: React.ReactNode) => void;
+}
+
+const FilingsTableContent: React.FC<FilingsTableContentProps> = ({ ticker, setHeaderActions }) => {
     const { data: filings, isLoading, isError } = useQuery<Filing[], Error>({
         queryKey: ['filings', ticker],
         queryFn: () => fetchFilings(ticker),
     });
+
+    const handleExport = () => {
+        if (!filings || filings.length === 0) return;
+
+        const headers = ['date', 'type', 'headline', 'link'];
+        const csvContent = [
+            headers.join(','),
+            ...filings.map(f =>
+                headers.map(header => escapeCsvValue(f[header as keyof Filing])).join(',')
+            )
+        ].join('\n');
+    
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `${ticker}-filings.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    };
+    
+    useEffect(() => {
+        if (filings && filings.length > 0) {
+            setHeaderActions(
+                <button
+                    onClick={handleExport}
+                    className="flex items-center text-sm bg-transparent border border-accent text-accent hover:bg-accent/10 font-bold py-1.5 px-3 rounded-md transition-colors duration-200"
+                    aria-label="Export filings to CSV"
+                >
+                    <DownloadIcon />
+                    <span className="hidden sm:inline ml-2">Export</span>
+                </button>
+            );
+        } else {
+            setHeaderActions(null);
+        }
+
+        return () => setHeaderActions(null);
+    }, [filings, setHeaderActions]);
+
 
     const parentRef = React.useRef<HTMLDivElement>(null);
 
@@ -90,14 +149,17 @@ const FilingsTableContent: React.FC<FilingsTableProps> = ({ ticker }) => {
 };
 
 const FilingsTable: React.FC<FilingsTableProps> = ({ ticker }) => {
+    const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
+
     return (
         <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
-             <div className="p-4 sm:p-6 border-b border-border">
+             <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-text-primary">Recent Filings</h3>
+                <div>{headerActions}</div>
             </div>
             <div className="flex-grow overflow-hidden">
                 <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
-                    <FilingsTableContent ticker={ticker} />
+                    <FilingsTableContent ticker={ticker} setHeaderActions={setHeaderActions} />
                 </FeatureGate>
             </div>
         </div>

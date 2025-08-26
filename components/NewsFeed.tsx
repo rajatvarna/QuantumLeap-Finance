@@ -1,19 +1,105 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchNews } from '../services/finnhubService';
-import type { NewsArticle } from '../types';
+import { analyzeNewsSentiment } from '../services/geminiService';
+import type { NewsArticle, SentimentAnalysisResult } from '../types';
+import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
+import FeatureGate from './FeatureGate';
 
 interface NewsFeedProps {
     ticker: string;
 }
+
+const DownloadIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+    </svg>
+);
+
+const escapeCsvValue = (value: any): string => {
+    const stringValue = String(value ?? '').trim();
+    if (/[",\n]/.test(stringValue)) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+    return stringValue;
+};
+
+const SentimentAnalysis: React.FC<{
+    data: SentimentAnalysisResult | null | undefined,
+    isLoading: boolean,
+    isError: boolean
+}> = ({ data, isLoading, isError }) => {
+    if (isLoading) {
+        return (
+            <div className="px-4 sm:px-6 py-4 border-t border-border">
+                <SkeletonLoader className="h-4 w-1/3 mb-2" />
+                <SkeletonLoader className="h-4 w-full" />
+                <SkeletonLoader className="h-4 w-3/4 mt-1" />
+            </div>
+        );
+    }
+
+    // Fail gracefully by showing nothing if there's an error or no data.
+    // This is an enhancement, not a critical feature.
+    if (isError || !data) {
+        return null; 
+    }
+
+    const sentimentColor = {
+        Positive: 'text-positive',
+        Negative: 'text-negative',
+        Neutral: 'text-text-secondary',
+    }[data.overallSentiment];
+    
+    const sentimentBorderColor = {
+        Positive: 'border-positive/30',
+        Negative: 'border-negative/30',
+        Neutral: 'border-border',
+    }[data.overallSentiment];
+
+    const sentimentBgColor = {
+        Positive: 'bg-positive/10',
+        Negative: 'bg-negative/10',
+        Neutral: 'bg-background',
+    }[data.overallSentiment];
+
+
+    return (
+        <div className={`mx-4 sm:mx-6 my-4 p-4 rounded-lg border ${sentimentBorderColor} ${sentimentBgColor}`}>
+            <h4 className="text-sm font-semibold text-text-primary mb-3">Sentiment Analysis</h4>
+            <div className="flex items-center gap-3 mb-2">
+                <span className={`text-base font-bold w-20 ${sentimentColor}`}>{data.overallSentiment}</span>
+                <div className="w-full bg-border rounded-full h-2">
+                    {/* The bar represents the score from -1 to 1, mapped to 0% to 100% width */}
+                    <div className={`${sentimentColor.replace('text-', 'bg-')} h-2 rounded-full`} style={{ width: `${(data.sentimentScore + 1) / 2 * 100}%` }}></div>
+                </div>
+                <span className={`font-mono text-sm font-semibold w-12 text-right ${sentimentColor}`}>
+                    {data.sentimentScore > 0 ? '+' : ''}{data.sentimentScore.toFixed(2)}
+                </span>
+            </div>
+            <p className="text-sm text-text-secondary">{data.summary}</p>
+        </div>
+    );
+};
+
 
 const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
     const { data: news, isLoading, isError } = useQuery<NewsArticle[], Error>({
         queryKey: ['news', ticker],
         queryFn: () => fetchNews(ticker),
     });
+
+    // Perform sentiment analysis on the client side once news is fetched.
+    // useMemo ensures this only recalculates when the news data changes.
+    const sentimentData = useMemo(() => {
+        if (news && news.length > 0) {
+            return analyzeNewsSentiment(news);
+        }
+        return null;
+    }, [news]);
+
 
     const parentRef = React.useRef<HTMLDivElement>(null);
 
@@ -23,6 +109,27 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
         estimateSize: () => 110, // Estimate the height of a news item
         overscan: 5,
     });
+    
+    const handleExport = () => {
+        if (!news || news.length === 0) return;
+
+        const headers = ['publishedDate', 'source', 'headline', 'summary'];
+        const csvContent = [
+            headers.join(','),
+            ...news.map(n =>
+                headers.map(header => escapeCsvValue(n[header as keyof NewsArticle])).join(',')
+            )
+        ].join('\n');
+    
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `${ticker}-news.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    };
 
     const renderContent = () => {
         if (isLoading) {
@@ -86,10 +193,29 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
 
     return (
         <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
-             <div className="p-4 sm:p-6 border-b border-border">
+             <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-text-primary">Latest News</h3>
+                {news && news.length > 0 && (
+                     <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
+                        <button
+                            onClick={handleExport}
+                            className="flex items-center text-sm bg-transparent border border-accent text-accent hover:bg-accent/10 font-bold py-1.5 px-3 rounded-md transition-colors duration-200"
+                            aria-label="Export news to CSV"
+                        >
+                            <DownloadIcon />
+                            <span className="hidden sm:inline ml-2">Export</span>
+                        </button>
+                    </FeatureGate>
+                )}
             </div>
-            <div className="flex-grow p-4 sm:p-6 pt-2 sm:pt-2 overflow-hidden">
+             <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
+                <SentimentAnalysis
+                    data={sentimentData}
+                    isLoading={isLoading}
+                    isError={isError}
+                />
+            </FeatureGate>
+            <div className="flex-grow p-4 sm:p-6 pt-0 overflow-hidden">
               {renderContent()}
             </div>
         </div>

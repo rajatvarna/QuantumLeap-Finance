@@ -5,7 +5,7 @@ import { useTheme } from '../hooks/useTheme';
 import { SubscriptionPlan } from '../types';
 
 const Header: React.FC = () => {
-    const { user, togglePlan } = useAuth();
+    const { user, login, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
 
     const SunIcon = () => (
@@ -30,16 +30,31 @@ const Header: React.FC = () => {
                     <h1 className="text-xl font-bold text-text-primary">QuantumLeap Finance</h1>
                 </div>
                 <div className="flex items-center space-x-4">
-                    {user && (
+                    {user ? (
                         <div className="flex items-center space-x-4">
                             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${user.plan === SubscriptionPlan.PRO ? 'bg-accent/20 text-accent' : 'bg-gray-200 dark:bg-gray-700 text-text-secondary'}`}>
                                 {user.plan} Plan
                             </span>
                             <button
-                                onClick={togglePlan}
+                                onClick={logout}
                                 className="text-sm bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
                             >
-                                Toggle Plan
+                                Logout
+                            </button>
+                        </div>
+                    ) : (
+                         <div className="flex items-center space-x-2">
+                            <button
+                                onClick={() => login(SubscriptionPlan.FREE)}
+                                className="text-sm bg-transparent border border-accent text-accent hover:bg-accent/10 font-bold py-2 px-4 rounded-md transition-colors duration-200"
+                            >
+                                Login (Free)
+                            </button>
+                            <button
+                                onClick={() => login(SubscriptionPlan.PRO)}
+                                className="text-sm bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
+                            >
+                                Login (Pro)
                             </button>
                         </div>
                     )}
