@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchStockData } from '../services/finnhubService';
 import StockHeader from './StockHeader';
 import StockChart from './StockChart';
 import FilingsTable from './FilingsTable';
@@ -7,6 +9,7 @@ import CompanyOverview from './CompanyOverview';
 import FinancialsView from './FinancialsView';
 import TranscriptsView from './TranscriptsView';
 import ShareholdersView from './ShareholdersView';
+import SkeletonLoader from './SkeletonLoader';
 
 
 interface DashboardProps {
@@ -15,6 +18,46 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
     const [activeTab, setActiveTab] = useState('Overview');
+
+    // Primary data fetch to act as a gatekeeper.
+    // If this fails, especially with a 401, we can show a top-level error.
+    const { isError, error, isLoading } = useQuery({
+        queryKey: ['stockData', ticker],
+        queryFn: () => fetchStockData(ticker),
+        staleTime: Infinity,
+    });
+
+    if (isLoading) {
+        return (
+            <div className="space-y-8">
+                <SkeletonLoader className="h-36 w-full rounded-xl" />
+                <SkeletonLoader className="h-10 w-full rounded-lg" />
+                 <div className="space-y-8">
+                    <SkeletonLoader className="h-40 w-full rounded-xl" />
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                       <SkeletonLoader className="h-[500px] w-full rounded-xl" />
+                       <SkeletonLoader className="h-[500px] w-full rounded-xl" />
+                    </div>
+                 </div>
+            </div>
+        );
+    }
+    
+    if (isError) {
+        const errorMessage = (error as any)?.status === 401
+            ? "API key is invalid or missing. Please check your configuration."
+            : `Failed to fetch data for ${ticker}. Please try again.`;
+            
+        return (
+            <div className="p-6 bg-card rounded-xl border border-negative/50 text-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-negative/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <h3 className="mt-4 text-lg font-semibold text-text-primary">Could not load data</h3>
+                <p className="mt-2 text-text-secondary">{errorMessage}</p>
+            </div>
+        );
+    }
 
     const tabs = ['Overview', 'Financials', 'Transcripts', 'Shareholders'];
 

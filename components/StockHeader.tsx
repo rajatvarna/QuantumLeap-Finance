@@ -19,11 +19,11 @@ const formatMarketCap = (marketCap: number): string => {
 };
 
 const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
-    const { data: stockData, isLoading, isError } = useQuery<StockData, Error>({
+    // This query now primarily uses cached data from the Dashboard's gatekeeper query.
+    const { data: stockData, isLoading, isError, error } = useQuery<StockData, Error>({
       queryKey: ['stockData', ticker],
       queryFn: () => fetchStockData(ticker),
       staleTime: Infinity, // Keep initial data fresh, live updates come from WebSocket
-      retry: false,
     });
 
     const [livePrice, setLivePrice] = useState<number | null>(null);
@@ -55,9 +55,14 @@ const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
     }
 
     if (isError || !stockData) {
+        // This error state is now less likely to be seen, as the parent Dashboard component handles it.
+        // It's kept as a fallback.
+        const errorMessage = (error as any)?.status === 401 
+            ? "Authentication failed. Please check your API key."
+            : `Could not load header data for ${ticker}.`;
         return (
             <div className="p-6 bg-card rounded-xl border border-negative/50 text-center text-negative">
-                Failed to fetch data for {ticker}. Please check if the ticker is valid.
+                {errorMessage}
             </div>
         );
     }

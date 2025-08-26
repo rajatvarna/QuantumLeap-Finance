@@ -1,35 +1,51 @@
-import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Transcript, Shareholder } from '../types';
+import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder } from '../types';
 
 const API_KEY = 'd2hfijpr01qon4ec0eu0d2hfijpr01qon4ec0eug';
 const BASE_URL = 'https://finnhub.io/api/v1';
 
-async function apiFetch<T>(endpoint: string): Promise<T | null> {
+class ApiError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
+
+async function apiFetch<T>(endpoint: string): Promise<T> {
+     if (!API_KEY) {
+        throw new ApiError('Finnhub API key is not configured.', 401);
+    }
+    
     try {
         const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${API_KEY}`;
         const response = await fetch(url);
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Finnhub API HTTP error: ${response.status} ${response.statusText}`, errorText);
-            return null;
+            let errorMessage = `Finnhub API HTTP error: ${response.status} ${response.statusText}`;
+            try {
+                const errorBody = await response.json();
+                errorMessage = errorBody.error || errorMessage;
+            } catch (e) {
+                // Ignore if the body is not JSON
+            }
+            throw new ApiError(errorMessage, response.status);
         }
 
-        // Add a check for the Content-Type header.
-        // Some issues (like an invalid API key) can cause Finnhub to return a 200 OK with an HTML error page.
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            const responseText = await response.text();
-            console.error("Finnhub API did not return JSON. This may be due to an invalid API key, rate limiting, or a server issue. Response snippet:", responseText.substring(0, 500));
-            // Return null, consistent with the function's error handling contract.
-            return null;
+             const responseText = await response.text();
+             console.error("Finnhub API did not return JSON. This may be due to an invalid API key, rate limiting, or a server issue. Response snippet:", responseText.substring(0, 500));
+             throw new Error("Invalid response format from API.");
         }
         
-        // Only try to parse as JSON if the content type is correct.
         return await response.json() as T;
     } catch (error) {
-        // This catch block now primarily handles network errors (e.g., failed to fetch) or other unexpected issues.
+        if (error instanceof ApiError) {
+            throw error;
+        }
         console.error("Network or unexpected error in apiFetch:", error);
-        return null;
+        throw new Error('A network error occurred while fetching data.');
     }
 }
 
@@ -41,69 +57,101 @@ type PriceUpdateCallback = (price: number) => void;
 class WebSocketManager {
     private socket: WebSocket | null = null;
     private subscriptions: Map<string, PriceUpdateCallback> = new Map();
-    private isConnected: boolean = false;
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = 5;
+    private connectPromise: Promise<void> | null = null;
 
     constructor() {
-        this.connect();
+        // Do not connect automatically. Connection will be established on the first subscription.
     }
 
-    private connect() {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) return;
+    private connect(): Promise<void> {
+        if (!this.connectPromise) {
+            this.connectPromise = new Promise((resolve, reject) => {
+                if (!API_KEY) {
+                    const err = new Error("Cannot connect WebSocket, Finnhub API key is missing.");
+                    console.error(err.message);
+                    this.connectPromise = null;
+                    return reject(err);
+                }
 
-        this.socket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                    return resolve();
+                }
 
-        this.socket.onopen = () => {
-            console.log('WebSocket connected');
-            this.isConnected = true;
-            this.reconnectAttempts = 0;
-            // Resubscribe to all symbols on successful connection
-            this.subscriptions.forEach((_, symbol) => {
-                this.socket?.send(JSON.stringify({ type: 'subscribe', symbol }));
-            });
-        };
+                if (this.socket && this.socket.readyState === WebSocket.CONNECTING) {
+                    // If a connection is already in progress, wait for it to complete.
+                    this.socket.onopen = () => resolve();
+                    this.socket.onerror = (event) => {
+                         const err = new Error("WebSocket connection failed.");
+                         console.error(err.message, event);
+                         this.connectPromise = null;
+                         reject(err);
+                    };
+                    return;
+                }
 
-        this.socket.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            if (message.type === 'trade' && message.data) {
-                message.data.forEach((trade: { s: string; p: number; t: number }) => {
-                    if (this.subscriptions.has(trade.s)) {
-                        this.subscriptions.get(trade.s)?.(trade.p);
+                this.socket = new WebSocket(`wss://ws.finnhub.io?token=${API_KEY}`);
+
+                this.socket.onopen = () => {
+                    console.log('WebSocket connected');
+                    this.reconnectAttempts = 0;
+                    this.subscriptions.forEach((_, symbol) => {
+                        this.socket?.send(JSON.stringify({ type: 'subscribe', symbol }));
+                    });
+                    resolve();
+                };
+
+                this.socket.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'trade' && message.data) {
+                        message.data.forEach((trade: { s: string; p: number; t: number }) => {
+                            this.subscriptions.get(trade.s)?.(trade.p);
+                        });
                     }
-                });
-            }
-        };
+                };
 
-        this.socket.onclose = () => {
-            console.log('WebSocket disconnected');
-            this.isConnected = false;
-            if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                setTimeout(() => {
-                    this.reconnectAttempts++;
-                    console.log(`WebSocket reconnecting... attempt ${this.reconnectAttempts}`);
-                    this.connect();
-                }, 1000 * this.reconnectAttempts); // Exponential backoff
-            } else {
-                console.error('WebSocket max reconnect attempts reached.');
-            }
-        };
+                this.socket.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    this.socket = null;
+                    this.connectPromise = null; // Allow new connection attempts
+                    if (this.subscriptions.size > 0 && this.reconnectAttempts < this.maxReconnectAttempts) {
+                        setTimeout(() => {
+                            this.reconnectAttempts++;
+                            console.log(`WebSocket reconnecting... attempt ${this.reconnectAttempts}`);
+                            this.connect().catch(() => {}); // Attempt to reconnect without letting it bubble up
+                        }, 1000 * this.reconnectAttempts);
+                    } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+                        console.error('WebSocket max reconnect attempts reached.');
+                    }
+                };
 
-        this.socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            this.socket?.close();
-        };
+                this.socket.onerror = (event) => {
+                    const err = new Error("WebSocket connection failed. This may be due to an invalid API key or network issue.");
+                    console.error(err.message);
+                    this.socket?.close();
+                    this.connectPromise = null;
+                    reject(err);
+                };
+            });
+        }
+        return this.connectPromise;
     }
 
-    public subscribe(symbol: string, callback: PriceUpdateCallback) {
-        if (this.isConnected && this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ type: 'subscribe', symbol }));
-        }
+    public async subscribe(symbol: string, callback: PriceUpdateCallback) {
         this.subscriptions.set(symbol, callback);
+        try {
+            await this.connect();
+            if (this.socket?.readyState === WebSocket.OPEN) {
+                this.socket.send(JSON.stringify({ type: 'subscribe', symbol }));
+            }
+        } catch (error) {
+            console.error(`Failed to subscribe ${symbol} to WebSocket:`, (error as Error).message);
+        }
     }
 
     public unsubscribe(symbol: string) {
-        if (this.isConnected && this.socket?.readyState === WebSocket.OPEN) {
+        if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({ type: 'unsubscribe', symbol }));
         }
         this.subscriptions.delete(symbol);
@@ -123,7 +171,6 @@ interface FinnhubFinancialsReport { endDate: string; year: number; report: { bs:
 interface FinnhubFinancials { data: FinnhubFinancialsReport[]; symbol: string; }
 interface FinnhubSearch { count: number; result: SearchResult[]; }
 interface FinnhubMetrics { metric: Record<string, any>; series: { annual: Record<string, any[]> }; }
-interface FinnhubTranscriptList { symbol: string; transcripts: Transcript[]; }
 interface FinnhubShareholderData { name: string; share: number; change: number; filingDate: string; }
 interface FinnhubShareholders { symbol: string; data: FinnhubShareholderData[]; }
 
@@ -164,7 +211,7 @@ export const fetchFilings = async (ticker: string): Promise<Filing[]> => {
     const filings = await apiFetch<FinnhubFiling[]>(`/stock/filings?symbol=${ticker}`);
     if (!filings) return [];
 
-    return filings.slice(0, 100).map(f => ({ // Fetch more for virtualization
+    return filings.slice(0, 100).map(f => ({
         date: f.filedDate.split(' ')[0],
         type: f.form,
         link: f.filingUrl,
@@ -183,17 +230,12 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
     const news = await apiFetch<FinnhubNews[]>(`/company-news?symbol=${ticker}&from=${from}&to=${to}`);
     if (!news) return [];
 
-    return news.slice(0, 50).map(n => ({ // Fetch more for virtualization
+    return news.slice(0, 50).map(n => ({
         publishedDate: formatDate(n.datetime),
         source: n.source,
         headline: n.headline,
         summary: n.summary,
     }));
-};
-
-export const fetchTranscripts = async (ticker: string): Promise<Transcript[]> => {
-    const response = await apiFetch<FinnhubTranscriptList>(`/stock/transcript/list?symbol=${ticker}`);
-    return response?.transcripts || [];
 };
 
 export const fetchShareholders = async (ticker: string): Promise<Shareholder[]> => {

@@ -72,12 +72,13 @@ export interface DetailedFinancials {
     multiples: FinancialReportRow[];
 }
 
-export interface Transcript {
-    id: string;
-    title: string;
-    time: string;
-    year: number;
+export interface EarningsTranscript {
+    symbol: string;
     quarter: number;
+    year: number;
+    date: string;
+    eps: number;
+    transcript: string;
 }
 
 export interface Shareholder {
