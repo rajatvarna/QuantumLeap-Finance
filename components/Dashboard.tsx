@@ -5,7 +5,6 @@ import StockHeader from './StockHeader';
 import StockChart from './StockChart';
 import FilingsTable from './FilingsTable';
 import NewsFeed from './NewsFeed';
-import CompanyOverview from './CompanyOverview';
 import FinancialsView from './FinancialsView';
 import TranscriptsView from './TranscriptsView';
 import InsiderTransactionsView from './InsiderTransactionsView';
@@ -75,7 +74,6 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             default:
                 return (
                     <div className="space-y-8">
-                        <CompanyOverview ticker={ticker} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <StockChart ticker={ticker} />
                             <NewsFeed ticker={ticker} />

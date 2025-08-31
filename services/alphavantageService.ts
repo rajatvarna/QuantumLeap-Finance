@@ -157,37 +157,6 @@ export const fetchLatestTranscript = async (ticker: string): Promise<EarningsTra
     }
 };
 
-
-/**
- * A robust CSV line parser that handles quoted fields containing commas.
- * @param line - A single line from a CSV file.
- * @returns An array of strings representing the fields.
- */
-const parseCsvLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        const nextChar = line[i+1];
-
-        if (char === '"' && inQuotes && nextChar === '"') { // Handle escaped quote
-            current += '"';
-            i++; // Skip next quote
-        } else if (char === '"') {
-            inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-            result.push(current);
-            current = '';
-        } else {
-            current += char;
-        }
-    }
-    result.push(current);
-    return result;
-};
-
-
 /**
  * Fetches insider trading transactions from Alpha Vantage.
  */
@@ -197,50 +166,26 @@ export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderT
     try {
         const url = `${BASE_URL}?function=INSIDER_TRANSACTIONS&symbol=${ticker}&apikey=${API_KEY}`;
         const response = await fetch(url);
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-        const text = await response.text();
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
         
-        // Handle API errors which might not be JSON
-        const expectedHeader = 'symbol,insider,relationship,transactionDate,transactionCode,shares,price,total,secForm,filingDate';
-        if (!text.trim().startsWith(expectedHeader)) {
-            try {
-                const errorJson = JSON.parse(text);
-                 if (errorJson.Note || errorJson['Error Message']) {
-                    console.warn(`Insider trading data fetch failed for ${ticker}:`, errorJson.Note || errorJson['Error Message']);
-                    return [];
-                }
-            } catch (e) {
-                 if (text.trim() !== '') {
-                    console.error(`Unexpected response for insider trading data for ${ticker}:`, text.substring(0, 200));
-                 }
-                return [];
-            }
+        const data = await response.json();
+
+        if (data.Note || data['Error Message']) {
+            console.warn(`Insider trading data fetch failed for ${ticker}:`, data.Note || data['Error Message']);
+            return [];
         }
 
-        const lines = text.trim().split('\n');
-        if (lines.length < 2) return [];
+        if (!data.data || !Array.isArray(data.data)) {
+            console.warn(`Unexpected response format for insider trading data for ${ticker}:`, data);
+            return [];
+        }
 
-        const headers = lines[0].split(',').map(h => h.trim());
-
-        const data = lines.slice(1).map(line => {
-            const values = parseCsvLine(line);
-            if (values.length !== headers.length) {
-                console.warn("Skipping malformed CSV line:", line);
-                return null;
-            }
-            const entry: any = {};
-            headers.forEach((header, i) => {
-                const value = values[i] || '';
-                entry[header] = value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
-            });
-            return entry;
-        }).filter(Boolean) as any[];
-
-
-        return data.slice(0, 100).map((t: any) => ({
+        return data.data.slice(0, 100).map((t: any) => ({
             name: t.insider,
-            share: 0, // Not provided by this endpoint
-            change: parseInt(t.shares), // Number of shares in transaction
+            share: 0, // Not provided by this endpoint (shares held after transaction)
+            change: parseInt(t.shares, 10), // Number of shares in transaction
             transactionDate: t.transactionDate,
             transactionPrice: parseFloat(t.price),
             transactionCode: t.transactionCode,
