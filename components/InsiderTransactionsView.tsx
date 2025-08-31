@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchInsiderTransactions } from '../services/alphavantageService';
+import { fetchInsiderTransactions } from '../services/finnhubService';
 import type { InsiderTransaction } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
@@ -49,8 +49,8 @@ const InsiderTransactionsViewContent: React.FC<InsiderTransactionsViewProps> = (
     );
 
     const formatTransactionCode = (code: string) => {
-        if (code === 'P') return <span className="text-positive font-semibold">Purchase</span>;
-        if (code === 'S') return <span className="text-negative font-semibold">Sale</span>;
+        if (code === 'P' || code === 'P-Purchase') return <span className="text-positive font-semibold">Purchase</span>;
+        if (code === 'S' || code === 'S-Sale') return <span className="text-negative font-semibold">Sale</span>;
         return code;
     };
 

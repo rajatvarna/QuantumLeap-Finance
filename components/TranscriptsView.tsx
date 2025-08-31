@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchLatestTranscript } from '../services/alphavantageService';
+import { fetchLatestTranscript } from '../services/finnhubService';
 import type { EarningsTranscript } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
@@ -44,7 +44,8 @@ const TranscriptsViewContent: React.FC<TranscriptsViewProps> = ({ ticker }) => {
              <div className="p-4 sm:p-6 border-b border-border">
                 <h3 className="text-xl font-semibold text-text-primary">Q{transcript.quarter} {transcript.year} Earnings Call Transcript</h3>
                 <p className="text-sm text-text-secondary mt-1">
-                    {new Date(transcript.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} | Reported EPS: ${transcript.eps}
+                    {new Date(transcript.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {!isNaN(transcript.eps) && ` | Reported EPS: $${transcript.eps.toFixed(2)}`}
                 </p>
             </div>
             <div className="p-4 sm:p-6 max-h-[600px] overflow-y-auto">

@@ -1,5 +1,5 @@
-// Fix: Add Shareholder to the type imports.
-import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder } from '../types';
+// Fix: Add Shareholder and InsiderTransaction to the type imports.
+import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder, InsiderTransaction, EarningsTranscript } from '../types';
 
 // Using a fresh, valid public sandbox API key to ensure the application is functional for demonstration.
 // This resolves authentication issues for both the REST API and the WebSocket connection.
@@ -260,6 +260,30 @@ export const fetchShareholders = async (ticker: string): Promise<Shareholder[]> 
     }));
 };
 
+/**
+ * Fetches insider trading transactions from Finnhub.
+ * This provides more reliable data including shares held after the transaction.
+ */
+export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderTransaction[]> => {
+    const response = await apiFetch<{ data: any[] }>(`/stock/insider-transactions?symbol=${ticker}`);
+    if (!response || !response.data) return [];
+
+    return response.data.slice(0, 100).map(t => {
+        const change = Number(t.change) || 0;
+        const price = Number(t.transactionPrice) || 0;
+        return {
+            name: t.name || 'N/A',
+            share: Number(t.share) || 0, // Shares held after transaction
+            change: change,
+            transactionDate: t.transactionDate || 'N/A',
+            transactionPrice: price,
+            transactionCode: t.transactionCode || 'N/A',
+            value: Math.abs(change * price),
+        };
+    });
+};
+
+
 const STATEMENT_CONFIG = {
     incomeStatement: [
         { name: 'Revenue', concepts: ['us-gaap_Revenues', 'us-gaap_SalesRevenueNet', 'us-gaap_RevenueFromContractWithCustomerExcludingAssessedTax'], report: 'ic' },
@@ -366,4 +390,78 @@ export const fetchDetailedFinancialsAndMetrics = async (ticker: string): Promise
     }
 
     return result;
+};
+
+interface FinnhubTranscriptInfo {
+  id: string;
+  title: string;
+  time: string;
+  year: number;
+  quarter: number;
+}
+
+interface FinnhubTranscriptContent {
+  transcript: { name: string; speech: string[] }[];
+}
+
+interface FinnhubEarning {
+  actual: number;
+  period: string;
+  quarter: number;
+  year: number;
+}
+
+/**
+ * Fetches the latest earnings call transcript from Finnhub.
+ * This is a more reliable source than Alpha Vantage for this data.
+ */
+export const fetchLatestTranscript = async (ticker: string): Promise<EarningsTranscript | null> => {
+  // 1. Get list of available transcripts
+  const transcriptListResponse = await apiFetch<{ transcript: FinnhubTranscriptInfo[] }>(`/stock/transcripts?symbol=${ticker}`);
+
+  const latestTranscriptInfo = transcriptListResponse?.transcript?.[0];
+  if (!latestTranscriptInfo) {
+    console.warn(`No transcripts found for ${ticker}.`);
+    return null;
+  }
+
+  const { id, quarter, year, time } = latestTranscriptInfo;
+
+  // 2. Fetch transcript content and recent earnings data in parallel
+  const [transcriptContentResponse, earningsData] = await Promise.all([
+    apiFetch<FinnhubTranscriptContent>(`/stock/transcripts?id=${id}`),
+    apiFetch<FinnhubEarning[]>(`/stock/earnings?symbol=${ticker}&limit=8`), // Fetch last 8 quarters to ensure a match
+  ]);
+
+  if (!transcriptContentResponse?.transcript) {
+    console.warn(`Could not fetch content for transcript ID ${id}.`);
+    return null;
+  }
+
+  // 3. Format the transcript content into a readable string
+  const formattedTranscript = transcriptContentResponse.transcript
+    .map(segment => `\n--- ${segment.name.toUpperCase()} ---\n\n${segment.speech.join('\n')}`)
+    .join('\n');
+
+  // 4. Find EPS for the matching quarter and year from the earnings data
+  const matchingEarning = earningsData?.find(e => e.year === year && e.quarter === quarter);
+
+  return {
+    symbol: ticker,
+    quarter,
+    year,
+    date: time.split(' ')[0],
+    eps: matchingEarning?.actual ?? NaN, // Use NaN if EPS is not found
+    transcript: formattedTranscript,
+  };
+};
+
+/**
+ * Fetches a list of industry peer tickers from Finnhub.
+ */
+export const fetchPeers = async (ticker: string): Promise<string[]> => {
+    const peers = await apiFetch<string[]>(`/stock/peers?symbol=${ticker}`);
+    if (!peers) return [];
+    // The first peer returned by the API is often the ticker itself, so we filter it out.
+    return peers.filter(p => p.toLowerCase() !== ticker.toLowerCase());
 };

@@ -1,4 +1,4 @@
-import type { EarningsTranscript, PerformanceComparison, PerformanceData, InsiderTransaction } from '../types';
+import type { EarningsTranscript, PerformanceComparison, PerformanceData } from '../types';
 
 // Use a dedicated environment variable for the Alpha Vantage API key.
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'XIAGUPO07P3BSVD5';
@@ -10,23 +10,76 @@ interface AlphaVantageTimeSeries {
     };
 }
 
+class AlphaVantageApiError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'AlphaVantageApiError';
+    }
+}
+
+/**
+ * A robust fetch wrapper for the Alpha Vantage API.
+ * It verifies the response is JSON before parsing, handles API-level errors,
+ * and provides better error diagnostics.
+ */
+async function alphaVantageApiFetch<T>(url: string, apiFunction: string, ticker: string): Promise<T> {
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new AlphaVantageApiError(`API HTTP error: ${response.status} ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get("content-type");
+        // Handle non-JSON responses, which can happen with API key errors or rate limiting text responses
+        if (!contentType || !contentType.includes("application/json")) {
+             const responseText = await response.text();
+             console.error(`Alpha Vantage API (${apiFunction} for ${ticker}) did not return JSON. Response snippet:`, responseText.substring(0, 500));
+             
+             if (responseText.includes("the parameter apikey is invalid or missing")) {
+                throw new AlphaVantageApiError('Invalid or missing Alpha Vantage API key.');
+             }
+             if (responseText.includes("Our standard API call frequency is")) {
+                throw new AlphaVantageApiError('API rate limit reached. Please wait and try again.');
+             }
+             throw new AlphaVantageApiError(`Invalid response format from API. Expected JSON, got ${contentType || 'none'}.`);
+        }
+        
+        const data = await response.json();
+
+        // Handle JSON responses that contain API-level errors or notes (e.g., rate limit)
+        if (data.Note) {
+             console.warn(`Alpha Vantage API Note for ${ticker}:`, data.Note);
+             throw new AlphaVantageApiError('API rate limit reached. Please wait and try again.');
+        }
+        if (data['Error Message']) {
+             console.warn(`Alpha Vantage API Error for ${ticker}:`, data['Error Message']);
+             throw new AlphaVantageApiError(data['Error Message']);
+        }
+        
+        return data as T;
+
+    } catch (error) {
+        if (error instanceof AlphaVantageApiError) {
+            throw error; // Re-throw custom errors to be handled by the calling function.
+        }
+        console.error(`Network or unexpected error in alphaVantageApiFetch for ${ticker}:`, error);
+        throw new AlphaVantageApiError(`A network error occurred while fetching ${apiFunction} data.`);
+    }
+}
+
+
 const fetchDailyAdjusted = async (ticker: string): Promise<AlphaVantageTimeSeries | null> => {
     try {
         const url = `${BASE_URL}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${ticker}&outputsize=full&apikey=${API_KEY}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Alpha Vantage API error: ${response.status} ${response.statusText}`);
-        }
-        const data = await response.json();
-        if (data.Note || data['Error Message']) {
-            console.warn(`Alpha Vantage API call for ${ticker} failed:`, data.Note || data['Error Message']);
-            // This could be a rate limit, so we return null instead of throwing an error to not fail the entire widget.
-            return null;
-        }
-        return data['Time Series (Daily)'];
+        const data = await alphaVantageApiFetch<{ 'Time Series (Daily)': AlphaVantageTimeSeries }>(url, 'TIME_SERIES_DAILY_ADJUSTED', ticker);
+        
+        // The API can return an empty object {} for an invalid symbol, so we check for the actual data key.
+        return data['Time Series (Daily)'] || null;
     } catch (error) {
-        console.error(`Error fetching daily adjusted data for ${ticker}:`, error);
-        return null; // Return null on network errors as well
+        // The error is already an AlphaVantageApiError, so we just log its message.
+        console.error(`Error fetching daily adjusted data for ${ticker}:`, (error as Error).message);
+        return null; // Return null on any API or network error
     }
 };
 
@@ -102,108 +155,6 @@ export const fetchPerformanceComparison = async (ticker: string): Promise<Perfor
         return result;
     } catch (error) {
         console.error("Error fetching performance comparison data from Alpha Vantage:", error);
-        throw error;
-    }
-};
-
-/**
- * Fetches real earnings call transcripts from Alpha Vantage.
- */
-export const fetchLatestTranscript = async (ticker: string): Promise<EarningsTranscript | null> => {
-    if (!API_KEY) throw new Error('Alpha Vantage API key is not configured.');
-    
-    try {
-        // Step 1: Fetch earnings data to find the latest quarter.
-        const earningsUrl = `${BASE_URL}?function=EARNINGS&symbol=${ticker}&apikey=${API_KEY}`;
-        const earningsResponse = await fetch(earningsUrl);
-        const earningsData = await earningsResponse.json();
-
-        if (earningsData.Note || !earningsData.quarterlyEarnings || earningsData.quarterlyEarnings.length === 0) {
-            console.warn(`No quarterly earnings data for ${ticker}.`);
-            return null;
-        }
-        
-        const latestEarning = earningsData.quarterlyEarnings[0];
-        const reportDate = latestEarning.reportedDate;
-        const reportedEPS = parseFloat(latestEarning.reportedEPS);
-        const fiscalDateEnding = latestEarning.fiscalDateEnding; // e.g., "2024-03-31"
-
-        // Derive quarter and year from fiscalDateEnding
-        const date = new Date(fiscalDateEnding);
-        const year = date.getUTCFullYear();
-        const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
-
-        // Step 2: Fetch the full transcript using the derived quarter and year.
-        const transcriptUrl = `${BASE_URL}?function=EARNINGS_CALL_TRANSCRIPT&symbol=${ticker}&quarter=${quarter}&fiscalYear=${year}&apikey=${API_KEY}`;
-        const transcriptResponse = await fetch(transcriptUrl);
-        const transcriptData = await transcriptResponse.json();
-
-        if (transcriptData.Note || transcriptData['Error Message'] || !transcriptData.content) {
-            console.warn(`Could not fetch full transcript for ${ticker} Q${quarter} ${year}`);
-            return null;
-        }
-        
-        return {
-            symbol: ticker,
-            quarter: quarter,
-            year: year,
-            date: reportDate,
-            eps: reportedEPS,
-            transcript: transcriptData.content,
-        };
-    } catch (error) {
-        console.error("Error fetching or parsing Alpha Vantage transcript data:", error);
-        throw error;
-    }
-};
-
-/**
- * Fetches insider trading transactions from Alpha Vantage.
- */
-export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderTransaction[]> => {
-    if (!API_KEY) throw new Error('Alpha Vantage API key is not configured.');
-
-    try {
-        // Explicitly request JSON data format to ensure consistency.
-        const url = `${BASE_URL}?function=INSIDER_TRANSACTIONS&symbol=${ticker}&datatype=json&apikey=${API_KEY}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-
-        // Handle API rate limiting or error messages gracefully.
-        if (data.Note || data['Error Message']) {
-            console.warn(`Insider trading data fetch failed for ${ticker}:`, data.Note || data['Error Message']);
-            return [];
-        }
-
-        // Validate the structure of the response.
-        if (!data.data || !Array.isArray(data.data)) {
-            console.warn(`Unexpected response format for insider trading data for ${ticker}:`, data);
-            return [];
-        }
-
-        // Map and parse the transaction data, ensuring data integrity.
-        return data.data.slice(0, 100).map((t: any) => {
-            const change = parseInt(t.shares, 10);
-            const transactionPrice = parseFloat(t.price);
-            const value = parseFloat(t.total);
-
-            return {
-                name: t.insider || 'N/A',
-                share: 0, // This specific endpoint does not provide shares held after transaction.
-                change: !isNaN(change) ? change : 0,
-                transactionDate: t.transactionDate || 'N/A',
-                transactionPrice: !isNaN(transactionPrice) ? transactionPrice : 0,
-                transactionCode: t.transactionCode || 'N/A',
-                value: !isNaN(value) ? value : 0,
-            };
-        });
-
-    } catch (error) {
-        console.error(`Error fetching insider transactions for ${ticker}:`, error);
         throw error;
     }
 };

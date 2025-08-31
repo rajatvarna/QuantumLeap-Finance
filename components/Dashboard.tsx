@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+
+
+import React, { useState, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchStockData } from '../services/finnhubService';
 import StockHeader from './StockHeader';
 import StockChart from './StockChart';
 import FilingsTable from './FilingsTable';
 import NewsFeed from './NewsFeed';
-import FinancialsView from './FinancialsView';
-import TranscriptsView from './TranscriptsView';
-import InsiderTransactionsView from './InsiderTransactionsView';
 import SkeletonLoader from './SkeletonLoader';
 import PerformanceWidget from './PerformanceWidget';
 import TradingViewAdvancedWidgets from './TradingViewAdvancedWidgets';
+
+// Lazy load tab components for better initial performance
+const FinancialsView = lazy(() => import('./FinancialsView'));
+const TranscriptsView = lazy(() => import('./TranscriptsView'));
+const InsiderTransactionsView = lazy(() => import('./InsiderTransactionsView'));
+const PeerPerformanceView = lazy(() => import('./PeerPerformanceView'));
 
 
 interface DashboardProps {
     ticker: string;
 }
+
+const TabContentLoader: React.FC = () => (
+    <div className="mt-6">
+        <SkeletonLoader className="h-[500px] w-full rounded-xl" />
+    </div>
+);
+
 
 const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
     const [activeTab, setActiveTab] = useState('Overview');
@@ -60,7 +72,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
         );
     }
 
-    const tabs = ['Overview', 'Financials', 'Transcripts', 'Insider Activity'];
+    const tabs = ['Overview', 'Financials', 'Transcripts', 'Insider Activity', 'Peers'];
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -70,6 +82,8 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                 return <TranscriptsView ticker={ticker} />;
             case 'Insider Activity':
                 return <InsiderTransactionsView ticker={ticker} />;
+            case 'Peers':
+                return <PeerPerformanceView ticker={ticker} />;
             case 'Overview':
             default:
                 return (
@@ -112,7 +126,9 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             </div>
             
             <div className="mt-6">
-                {renderTabContent()}
+                <Suspense fallback={<TabContentLoader />}>
+                    {renderTabContent()}
+                </Suspense>
             </div>
         </div>
     );
