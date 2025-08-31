@@ -82,13 +82,6 @@ export interface EarningsTranscript {
     transcript: string;
 }
 
-export interface Shareholder {
-    name: string;
-    share: number;
-    change: number;
-    filingDate: string;
-}
-
 export interface PerformanceData {
     [period: string]: number | null;
 }
@@ -107,4 +100,10 @@ export interface InsiderTransaction {
   transactionPrice: number;
   transactionCode: string;
   value: number;
+}
+// Fix: Add Shareholder interface to define the structure for shareholder data.
+export interface Shareholder {
+    name: string;
+    share: number;
+    filingDate: string;
 }

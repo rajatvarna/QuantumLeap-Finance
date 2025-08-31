@@ -113,51 +113,43 @@ export const fetchLatestTranscript = async (ticker: string): Promise<EarningsTra
     if (!API_KEY) throw new Error('Alpha Vantage API key is not configured.');
     
     try {
-        const url = `${BASE_URL}?function=EARNINGS_CALENDAR&symbol=${ticker}&horizon=3month&apikey=${API_KEY}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-        
-        // The endpoint returns CSV data.
-        const csvText = await response.text();
-        if (!csvText || csvText.startsWith('{')) { // Error responses are JSON
-            console.warn(`No earnings calendar data for ${ticker}.`);
+        // Step 1: Fetch earnings data to find the latest quarter.
+        const earningsUrl = `${BASE_URL}?function=EARNINGS&symbol=${ticker}&apikey=${API_KEY}`;
+        const earningsResponse = await fetch(earningsUrl);
+        const earningsData = await earningsResponse.json();
+
+        if (earningsData.Note || !earningsData.quarterlyEarnings || earningsData.quarterlyEarnings.length === 0) {
+            console.warn(`No quarterly earnings data for ${ticker}.`);
             return null;
         }
-
-        const lines = csvText.trim().split('\n');
-        if (lines.length < 2) return null;
-
-        const latestEvent = lines[1].split(','); // Get the most recent event
-        const reportDate = latestEvent[2];
-        const reportedEPS = parseFloat(latestEvent[4]);
-        const quarterMatch = latestEvent[6]?.match(/Q(\d)(\d{4})/);
         
-        if (!quarterMatch) return null;
+        const latestEarning = earningsData.quarterlyEarnings[0];
+        const reportDate = latestEarning.reportedDate;
+        const reportedEPS = parseFloat(latestEarning.reportedEPS);
+        const fiscalDateEnding = latestEarning.fiscalDateEnding; // e.g., "2024-03-31"
 
-        const [, qtr, year] = quarterMatch;
-        const quarter = parseInt(qtr);
+        // Derive quarter and year from fiscalDateEnding
+        const date = new Date(fiscalDateEnding);
+        const year = date.getUTCFullYear();
+        const quarter = Math.floor(date.getUTCMonth() / 3) + 1;
 
-        // Now, fetch the full transcript
-        const transcriptUrl = `${BASE_URL}?function=TRANSCRIPT&symbol=${ticker}&quarter=Q${quarter}${year}&apikey=${API_KEY}`;
+        // Step 2: Fetch the full transcript using the derived quarter and year.
+        const transcriptUrl = `${BASE_URL}?function=EARNINGS_CALL_TRANSCRIPT&symbol=${ticker}&quarter=${quarter}&fiscalYear=${year}&apikey=${API_KEY}`;
         const transcriptResponse = await fetch(transcriptUrl);
         const transcriptData = await transcriptResponse.json();
 
-        if (transcriptData.Note || transcriptData['Error Message'] || !transcriptData.transcript) {
+        if (transcriptData.Note || transcriptData['Error Message'] || !transcriptData.content) {
             console.warn(`Could not fetch full transcript for ${ticker} Q${quarter} ${year}`);
             return null;
         }
         
-        const formattedTranscript = transcriptData.transcript.map(
-            (entry: { participant: string; dialogue: string }) => `${entry.participant}:\n${entry.dialogue}`
-        ).join('\n\n');
-
         return {
             symbol: ticker,
             quarter: quarter,
-            year: parseInt(year),
+            year: year,
             date: reportDate,
             eps: reportedEPS,
-            transcript: formattedTranscript,
+            transcript: transcriptData.content,
         };
     } catch (error) {
         console.error("Error fetching or parsing Alpha Vantage transcript data:", error);
@@ -203,13 +195,14 @@ export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderT
     if (!API_KEY) throw new Error('Alpha Vantage API key is not configured.');
 
     try {
-        const url = `${BASE_URL}?function=INSIDER_TRADING&symbol=${ticker}&apikey=${API_KEY}`;
+        const url = `${BASE_URL}?function=INSIDER_TRANSACTIONS&symbol=${ticker}&apikey=${API_KEY}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error(`API error: ${response.status}`);
         const text = await response.text();
         
         // Handle API errors which might not be JSON
-        if (!text.trim().startsWith('symbol,name,share,change')) {
+        const expectedHeader = 'symbol,insider,relationship,transactionDate,transactionCode,shares,price,total,secForm,filingDate';
+        if (!text.trim().startsWith(expectedHeader)) {
             try {
                 const errorJson = JSON.parse(text);
                  if (errorJson.Note || errorJson['Error Message']) {
@@ -217,7 +210,9 @@ export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderT
                     return [];
                 }
             } catch (e) {
-                console.error(`Unexpected response for insider trading data for ${ticker}:`, text.substring(0, 200));
+                 if (text.trim() !== '') {
+                    console.error(`Unexpected response for insider trading data for ${ticker}:`, text.substring(0, 200));
+                 }
                 return [];
             }
         }
@@ -243,13 +238,13 @@ export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderT
 
 
         return data.slice(0, 100).map((t: any) => ({
-            name: t.name,
-            share: parseInt(t.share),
-            change: parseInt(t.change),
+            name: t.insider,
+            share: 0, // Not provided by this endpoint
+            change: parseInt(t.shares), // Number of shares in transaction
             transactionDate: t.transactionDate,
-            transactionPrice: parseFloat(t.transactionPrice),
+            transactionPrice: parseFloat(t.price),
             transactionCode: t.transactionCode,
-            value: Math.abs(parseInt(t.change) * parseFloat(t.transactionPrice)),
+            value: parseFloat(t.total),
         }));
 
     } catch (error) {

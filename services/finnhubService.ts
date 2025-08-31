@@ -1,3 +1,4 @@
+// Fix: Add Shareholder to the type imports.
 import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder } from '../types';
 
 // Using a fresh, valid public sandbox API key to ensure the application is functional for demonstration.
@@ -179,8 +180,6 @@ interface FinnhubFinancialsReport { endDate: string; year: number; report: { bs:
 interface FinnhubFinancials { data: FinnhubFinancialsReport[]; symbol: string; }
 interface FinnhubSearch { count: number; result: SearchResult[]; }
 interface FinnhubMetrics { metric: Record<string, any>; series: { annual: Record<string, any[]> }; }
-interface FinnhubShareholderData { name: string; share: number; change: number; filingDate: string; }
-interface FinnhubShareholders { symbol: string; data: FinnhubShareholderData[]; }
 
 
 export const searchSymbols = async (query: string): Promise<SearchResult[]> => {
@@ -247,9 +246,18 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
     }));
 };
 
+// Fix: Add fetchShareholders function to retrieve institutional ownership data.
 export const fetchShareholders = async (ticker: string): Promise<Shareholder[]> => {
-    const response = await apiFetch<FinnhubShareholders>(`/stock/institutional-ownership?symbol=${ticker}&from=1900-01-01`);
-    return response?.data || [];
+    // Fetch top 50 institutional shareholders
+    const response = await apiFetch<{ ownership: { name: string; share: number; change: number; filingDate: string }[] }>(`/stock/ownership?symbol=${ticker}&limit=50`);
+    if (!response || !response.ownership) {
+        return [];
+    }
+    return response.ownership.map(({ name, share, filingDate }) => ({
+        name,
+        share,
+        filingDate,
+    }));
 };
 
 const STATEMENT_CONFIG = {

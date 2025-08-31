@@ -8,7 +8,6 @@ import NewsFeed from './NewsFeed';
 import CompanyOverview from './CompanyOverview';
 import FinancialsView from './FinancialsView';
 import TranscriptsView from './TranscriptsView';
-import ShareholdersView from './ShareholdersView';
 import InsiderTransactionsView from './InsiderTransactionsView';
 import SkeletonLoader from './SkeletonLoader';
 import PerformanceWidget from './PerformanceWidget';
@@ -62,7 +61,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
         );
     }
 
-    const tabs = ['Overview', 'Financials', 'Transcripts', 'Shareholders', 'Insider Activity'];
+    const tabs = ['Overview', 'Financials', 'Transcripts', 'Insider Activity'];
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -70,8 +69,6 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                 return <FinancialsView ticker={ticker} />;
             case 'Transcripts':
                 return <TranscriptsView ticker={ticker} />;
-            case 'Shareholders':
-                return <ShareholdersView ticker={ticker} />;
             case 'Insider Activity':
                 return <InsiderTransactionsView ticker={ticker} />;
             case 'Overview':
