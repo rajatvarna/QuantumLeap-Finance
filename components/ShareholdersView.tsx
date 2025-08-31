@@ -19,7 +19,7 @@ interface ShareholderWithOwnership extends Shareholder {
 }
 
 const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) => {
-    const { data: shareholders, isLoading, isError } = useQuery<Shareholder[], Error>({
+    const { data: shareholders, isLoading, isError, refetch } = useQuery<Shareholder[], Error>({
         queryKey: ['shareholders', ticker],
         queryFn: () => fetchShareholders(ticker),
     });
@@ -54,7 +54,18 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
     }
     
     if (isError) {
-        return <div className="text-center text-negative p-4 bg-card border border-border rounded-xl">Could not load shareholder data.</div>;
+        return (
+            <div className="text-center p-8 bg-card border border-border rounded-xl">
+                <p className="text-negative font-semibold">Could not load shareholder data.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    aria-label="Retry fetching shareholder data"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
     
     if (!sortedShareholders || sortedShareholders.length === 0) {

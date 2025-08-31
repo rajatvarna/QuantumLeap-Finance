@@ -20,7 +20,7 @@ const formatMarketCap = (marketCap: number): string => {
 
 const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
     // This query now primarily uses cached data from the Dashboard's gatekeeper query.
-    const { data: stockData, isLoading, isError, error } = useQuery<StockData, Error>({
+    const { data: stockData, isLoading, isError, error, refetch } = useQuery<StockData, Error>({
       queryKey: ['stockData', ticker],
       queryFn: () => fetchStockData(ticker),
       staleTime: Infinity, // Keep initial data fresh, live updates come from WebSocket
@@ -61,8 +61,15 @@ const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
             ? "Authentication failed. Please check your API key."
             : `Could not load header data for ${ticker}.`;
         return (
-            <div className="p-6 bg-card rounded-xl border border-negative/50 text-center text-negative">
-                {errorMessage}
+            <div className="p-6 bg-card rounded-xl border border-negative/50 text-center">
+                <p className="text-negative">{errorMessage}</p>
+                 <button
+                    onClick={() => refetch()}
+                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
+                    aria-label="Retry fetching header data"
+                >
+                    Retry
+                </button>
             </div>
         );
     }

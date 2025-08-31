@@ -1,4 +1,5 @@
 
+
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDetailedFinancialsAndMetrics } from '../services/finnhubService';
@@ -111,7 +112,7 @@ const FinancialsTable: React.FC<{ title: string; data: FinancialReportRow[]; yea
 };
 
 const FinancialsViewContent: React.FC<FinancialsViewProps> = ({ ticker }) => {
-    const { data, isLoading, isError } = useQuery({
+    const { data, isLoading, isError, refetch } = useQuery({
         queryKey: ['detailedFinancials', ticker],
         queryFn: () => fetchDetailedFinancialsAndMetrics(ticker),
     });
@@ -170,7 +171,18 @@ const FinancialsViewContent: React.FC<FinancialsViewProps> = ({ ticker }) => {
     }
     
     if (isError) {
-        return <div className="text-center text-negative p-4">Could not load detailed financial data.</div>;
+        return (
+            <div className="text-center p-8">
+                <p className="text-negative font-semibold">Could not load detailed financial data.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    aria-label="Retry fetching financial data"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
     
     if (!data || data.years.length === 0) {

@@ -27,7 +27,7 @@ const PerformanceCell: React.FC<{ value: number | null; isTicker?: boolean }> = 
 
 
 const PerformanceWidgetContent: React.FC<PerformanceWidgetProps> = ({ ticker }) => {
-    const { data, isLoading, isError, error } = useQuery<PerformanceComparison, Error>({
+    const { data, isLoading, isError, error, refetch } = useQuery<PerformanceComparison, Error>({
         queryKey: ['performance', ticker, 'alphavantage'],
         queryFn: () => fetchPerformanceComparison(ticker),
     });
@@ -48,7 +48,19 @@ const PerformanceWidgetContent: React.FC<PerformanceWidgetProps> = ({ ticker }) 
     }
     
     if (isError) {
-        return <div className="text-center text-negative p-4">Could not load performance data. {(error as any)?.message}</div>;
+        return (
+            <div className="text-center p-4">
+                <p className="text-negative">Could not load performance data.</p>
+                <p className="text-text-secondary text-xs mt-1">{(error as any)?.message}</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-2 text-sm bg-accent hover:bg-accent-hover text-white font-bold py-1 px-3 rounded-md transition-colors duration-200"
+                    aria-label="Retry fetching performance data"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
     
     if (!data || !data[ticker]) {

@@ -76,7 +76,7 @@ const PeerPerformanceChart: React.FC<{ ticker: string; peers: string[] }> = memo
 
 
 const PeerPerformanceViewContent: React.FC<PeerPerformanceViewProps> = ({ ticker }) => {
-    const { data: peers, isLoading, isError, error } = useQuery<string[], Error>({
+    const { data: peers, isLoading, isError, error, refetch } = useQuery<string[], Error>({
         queryKey: ['peers', ticker],
         queryFn: () => fetchPeers(ticker),
     });
@@ -90,7 +90,19 @@ const PeerPerformanceViewContent: React.FC<PeerPerformanceViewProps> = ({ ticker
     }
     
     if (isError) {
-        return <div className="text-center text-negative p-4 bg-card border border-border rounded-xl">Could not load peer data. {(error as any)?.message}</div>;
+        return (
+            <div className="text-center p-8 bg-card border border-border rounded-xl">
+                <p className="text-negative font-semibold">Could not load peer data.</p>
+                <p className="text-text-secondary text-sm mt-1">{(error as any)?.message}</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    aria-label="Retry fetching peer data"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
     
     if (!peers || peers.length === 0) {

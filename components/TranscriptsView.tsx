@@ -11,7 +11,7 @@ interface TranscriptsViewProps {
 }
 
 const TranscriptsViewContent: React.FC<TranscriptsViewProps> = ({ ticker }) => {
-    const { data: transcript, isLoading, isError, error } = useQuery<EarningsTranscript | null, Error>({
+    const { data: transcript, isLoading, isError, error, refetch } = useQuery<EarningsTranscript | null, Error>({
         queryKey: ['transcript', ticker],
         queryFn: () => fetchLatestTranscript(ticker),
     });
@@ -32,7 +32,19 @@ const TranscriptsViewContent: React.FC<TranscriptsViewProps> = ({ ticker }) => {
     }
     
     if (isError) {
-        return <div className="text-center text-negative p-4 bg-card border border-border rounded-xl">Could not load earnings call transcript. {(error as any)?.message}</div>;
+        return (
+            <div className="text-center p-8 bg-card border border-border rounded-xl">
+                <p className="text-negative font-semibold">Could not load earnings call transcript.</p>
+                <p className="text-text-secondary text-sm mt-1">{(error as any)?.message}</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    aria-label="Retry fetching transcript"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
     
     if (!transcript) {

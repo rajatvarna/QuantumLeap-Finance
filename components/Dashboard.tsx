@@ -34,7 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
 
     // Primary data fetch to act as a gatekeeper.
     // If this fails, especially with a 401, we can show a top-level error.
-    const { isError, error, isLoading } = useQuery({
+    const { isError, error, isLoading, refetch } = useQuery({
         queryKey: ['stockData', ticker],
         queryFn: () => fetchStockData(ticker),
         staleTime: Infinity,
@@ -68,6 +68,13 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                 </svg>
                 <h3 className="mt-4 text-lg font-semibold text-text-primary">Could not load data</h3>
                 <p className="mt-2 text-text-secondary">{errorMessage}</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    aria-label="Retry fetching data"
+                >
+                    Retry
+                </button>
             </div>
         );
     }

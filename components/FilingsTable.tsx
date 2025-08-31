@@ -33,7 +33,7 @@ interface FilingsTableContentProps extends FilingsTableProps {
 }
 
 const FilingsTableContent: React.FC<FilingsTableContentProps> = ({ ticker, setHeaderActions }) => {
-    const { data: filings, isLoading, isError } = useQuery<Filing[], Error>({
+    const { data: filings, isLoading, isError, refetch } = useQuery<Filing[], Error>({
         queryKey: ['filings', ticker],
         queryFn: () => fetchFilings(ticker),
     });
@@ -100,7 +100,18 @@ const FilingsTableContent: React.FC<FilingsTableContentProps> = ({ ticker, setHe
     }
     
     if (isError) {
-        return <div className="text-center text-negative p-4">Could not load company filings.</div>;
+        return (
+            <div className="text-center p-4">
+                <p className="text-negative">Could not load company filings.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-2 text-sm bg-accent hover:bg-accent-hover text-white font-bold py-1 px-3 rounded-md transition-colors duration-200"
+                    aria-label="Retry fetching filings"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
 
     if (!sortedFilings || sortedFilings.length === 0) {

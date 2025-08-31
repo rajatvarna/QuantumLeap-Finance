@@ -86,7 +86,7 @@ const SentimentAnalysis: React.FC<{
 
 
 const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
-    const { data: news, isLoading: isLoadingNews, isError: isErrorNews } = useQuery<NewsArticle[], Error>({
+    const { data: news, isLoading: isLoadingNews, isError: isErrorNews, refetch } = useQuery<NewsArticle[], Error>({
         queryKey: ['news', ticker],
         queryFn: () => fetchNews(ticker),
     });
@@ -148,7 +148,18 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
         }
 
         if (isErrorNews) {
-            return <div className="text-center text-negative p-4">Could not load news articles.</div>;
+            return (
+                <div className="text-center p-4">
+                    <p className="text-negative">Could not load news articles.</p>
+                    <button
+                        onClick={() => refetch()}
+                        className="mt-2 text-sm bg-accent hover:bg-accent-hover text-white font-bold py-1 px-3 rounded-md transition-colors duration-200"
+                        aria-label="Retry fetching news"
+                    >
+                        Retry
+                    </button>
+                </div>
+            );
         }
 
         if (!sortedNews || sortedNews.length === 0) {

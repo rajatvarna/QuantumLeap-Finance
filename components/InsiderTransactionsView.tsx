@@ -13,7 +13,7 @@ interface InsiderTransactionsViewProps {
 }
 
 const InsiderTransactionsViewContent: React.FC<InsiderTransactionsViewProps> = ({ ticker }) => {
-    const { data: transactions, isLoading, isError } = useQuery<InsiderTransaction[], Error>({
+    const { data: transactions, isLoading, isError, refetch } = useQuery<InsiderTransaction[], Error>({
         queryKey: ['insiderTransactions', ticker],
         queryFn: () => fetchInsiderTransactions(ticker),
     });
@@ -29,7 +29,18 @@ const InsiderTransactionsViewContent: React.FC<InsiderTransactionsViewProps> = (
     }
     
     if (isError) {
-        return <div className="text-center text-negative p-4 bg-card border border-border rounded-xl">Could not load insider transaction data.</div>;
+        return (
+            <div className="text-center p-8 bg-card border border-border rounded-xl">
+                <p className="text-negative font-semibold">Could not load insider transaction data.</p>
+                <button
+                    onClick={() => refetch()}
+                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    aria-label="Retry fetching insider transactions"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
     
     if (!sortedTransactions || sortedTransactions.length === 0) {
