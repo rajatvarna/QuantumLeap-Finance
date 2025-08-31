@@ -1,10 +1,13 @@
-import React from 'react';
+
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDetailedFinancialsAndMetrics } from '../services/finnhubService';
 import type { FinancialReportRow } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 import FeatureGate from './FeatureGate';
+import { useSort } from '../hooks/useSort';
+import SortIcon from './SortIcon';
 
 interface FinancialsViewProps {
     ticker: string;
@@ -40,6 +43,42 @@ const formatValue = (value: number | string): string => {
 
 const FinancialsTable: React.FC<{ title: string; data: FinancialReportRow[]; years: string[] }> = ({ title, data, years }) => {
     if (data.length === 0) return null;
+
+    // 1. Create a flattened, sortable version of the data for the useSort hook.
+    // The keys will be like { metric: 'Revenue', '2023': 1000, '2022': 900 }
+    const sortableData = useMemo(() => {
+        return data.map(row => ({
+            metric: row.metric,
+            ...row.values,
+        }));
+    }, [data]);
+    
+    // Define the type for the sortable data keys
+    type SortableDataKey = 'metric' | string;
+
+    // 2. Apply the sort hook
+    const { items: sortedFlatData, requestSort, sortConfig } = useSort(sortableData, { key: 'metric', direction: 'asc' });
+
+    // 3. Map the sorted flat data back to the original structure for rendering
+    const sortedRenderData = useMemo(() => {
+        // Using a map for efficient lookup
+        const originalDataMap = new Map(data.map(item => [item.metric, item]));
+        return sortedFlatData.map(sortedItem => originalDataMap.get(sortedItem.metric)!).filter(Boolean);
+    }, [sortedFlatData, data]);
+
+
+    const SortableHeader: React.FC<{ sortKey: SortableDataKey; children: React.ReactNode; className?: string }> = ({ sortKey, children, className }) => (
+        <th scope="col" className={`px-6 py-3 font-medium whitespace-nowrap ${className}`}>
+            <button className="flex items-center uppercase w-full" onClick={() => requestSort(sortKey as any)} style={{ justifyContent: className?.includes('text-right') ? 'flex-end' : 'flex-start' }}>
+                {children}
+                <SortIcon
+                    isActive={sortConfig?.key === sortKey}
+                    direction={sortConfig?.key === sortKey ? sortConfig.direction : null}
+                />
+            </button>
+        </th>
+    );
+
     return (
         <div className="mb-12 last:mb-0">
             <h3 className="text-xl font-semibold text-text-primary mb-4">{title}</h3>
@@ -47,14 +86,14 @@ const FinancialsTable: React.FC<{ title: string; data: FinancialReportRow[]; yea
                 <table className="w-full text-sm text-left text-text-secondary">
                     <thead className="text-xs text-text-tertiary uppercase">
                         <tr>
-                            <th scope="col" className="px-6 py-3 font-medium whitespace-nowrap">Metric (Annual)</th>
+                            <SortableHeader sortKey="metric">Metric (Annual)</SortableHeader>
                             {years.map(year => (
-                                <th key={year} scope="col" className="px-6 py-3 font-medium text-right whitespace-nowrap">{year}</th>
+                                <SortableHeader key={year} sortKey={year} className="text-right">{year}</SortableHeader>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
-                        {data.map((row) => (
+                        {sortedRenderData.map((row) => (
                             <tr key={row.metric} className="border-b border-border last:border-b-0 hover:bg-background">
                                 <td className="px-6 py-4 font-semibold text-text-primary whitespace-nowrap">{row.metric}</td>
                                 {years.map(year => (

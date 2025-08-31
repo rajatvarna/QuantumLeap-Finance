@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -6,6 +7,8 @@ import type { Filing } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 import FeatureGate from './FeatureGate';
+import { useSort } from '../hooks/useSort';
+import SortIcon from './SortIcon';
 
 interface FilingsTableProps {
     ticker: string;
@@ -35,13 +38,15 @@ const FilingsTableContent: React.FC<FilingsTableContentProps> = ({ ticker, setHe
         queryFn: () => fetchFilings(ticker),
     });
 
+    const { items: sortedFilings, requestSort, sortConfig } = useSort(filings, { key: 'date', direction: 'desc' });
+
     const handleExport = () => {
-        if (!filings || filings.length === 0) return;
+        if (!sortedFilings || sortedFilings.length === 0) return;
 
         const headers = ['date', 'type', 'headline', 'link'];
         const csvContent = [
             headers.join(','),
-            ...filings.map(f =>
+            ...sortedFilings.map(f =>
                 headers.map(header => escapeCsvValue(f[header as keyof Filing])).join(',')
             )
         ].join('\n');
@@ -73,13 +78,13 @@ const FilingsTableContent: React.FC<FilingsTableContentProps> = ({ ticker, setHe
         }
 
         return () => setHeaderActions(null);
-    }, [filings, setHeaderActions]);
+    }, [filings, setHeaderActions, sortedFilings]);
 
 
     const parentRef = React.useRef<HTMLDivElement>(null);
 
     const rowVirtualizer = useVirtualizer({
-        count: filings?.length ?? 0,
+        count: sortedFilings?.length ?? 0,
         getScrollElement: () => parentRef.current,
         estimateSize: () => 53, // Estimate row height in pixels
     });
@@ -98,9 +103,21 @@ const FilingsTableContent: React.FC<FilingsTableContentProps> = ({ ticker, setHe
         return <div className="text-center text-negative p-4">Could not load company filings.</div>;
     }
 
-    if (!filings || filings.length === 0) {
+    if (!sortedFilings || sortedFilings.length === 0) {
         return <div className="text-center text-text-secondary p-4">No recent filings found.</div>;
     }
+    
+    const SortableHeader: React.FC<{ sortKey: keyof Filing; children: React.ReactNode }> = ({ sortKey, children }) => (
+        <th scope="col" className="px-6 py-3 font-medium">
+            <button className="flex items-center uppercase" onClick={() => requestSort(sortKey)}>
+                {children}
+                <SortIcon
+                    isActive={sortConfig?.key === sortKey}
+                    direction={sortConfig?.key === sortKey ? sortConfig.direction : null}
+                />
+            </button>
+        </th>
+    );
 
     return (
         <div ref={parentRef} className="overflow-auto h-full">
@@ -108,14 +125,14 @@ const FilingsTableContent: React.FC<FilingsTableContentProps> = ({ ticker, setHe
                 <table className="w-full text-sm text-left text-text-secondary">
                     <thead className="text-xs text-text-tertiary uppercase bg-card" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                         <tr>
-                            <th scope="col" className="px-6 py-3 font-medium">Date</th>
-                            <th scope="col" className="px-6 py-3 font-medium">Type</th>
+                            <SortableHeader sortKey="date">Date</SortableHeader>
+                            <SortableHeader sortKey="type">Type</SortableHeader>
                             <th scope="col" className="px-6 py-3 font-medium">Headline</th>
                         </tr>
                     </thead>
                     <tbody>
                         {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                            const filing = filings[virtualItem.index];
+                            const filing = sortedFilings[virtualItem.index];
                             return (
                                 <tr 
                                     key={virtualItem.key} 

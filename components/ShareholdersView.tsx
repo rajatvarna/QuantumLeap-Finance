@@ -1,13 +1,21 @@
-import React from 'react';
+
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchShareholders, fetchStockData } from '../services/finnhubService';
 import type { Shareholder, StockData } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 import FeatureGate from './FeatureGate';
+import { useSort } from '../hooks/useSort';
+import SortIcon from './SortIcon';
 
 interface ShareholdersViewProps {
     ticker: string;
+}
+
+// Define a new type for the augmented shareholder data for sorting purposes
+interface ShareholderWithOwnership extends Shareholder {
+    ownership?: number;
 }
 
 const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) => {
@@ -23,7 +31,19 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
         staleTime: Infinity,
     });
     
-    const totalShares = stockData?.shareOutstanding;
+    // Augment shareholder data with a calculated 'ownership' property for sorting
+    const shareholdersWithOwnership = useMemo((): ShareholderWithOwnership[] => {
+        if (!shareholders) return [];
+        if (!stockData?.shareOutstanding) return shareholders;
+        const totalShares = stockData.shareOutstanding * 1_000_000;
+        if (totalShares === 0) return shareholders;
+        return shareholders.map(holder => ({
+            ...holder,
+            ownership: (holder.share / totalShares) * 100,
+        }));
+    }, [shareholders, stockData]);
+    
+    const { items: sortedShareholders, requestSort, sortConfig } = useSort(shareholdersWithOwnership, { key: 'share', direction: 'desc' });
 
     if (isLoading) {
         return (
@@ -37,9 +57,21 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
         return <div className="text-center text-negative p-4 bg-card border border-border rounded-xl">Could not load shareholder data.</div>;
     }
     
-    if (!shareholders || shareholders.length === 0) {
+    if (!sortedShareholders || sortedShareholders.length === 0) {
         return <div className="text-center text-text-secondary p-4 bg-card border border-border rounded-xl">No institutional shareholder data found.</div>;
     }
+
+    const SortableHeader: React.FC<{ sortKey: keyof ShareholderWithOwnership; children: React.ReactNode; className?: string }> = ({ sortKey, children, className = '' }) => (
+        <th scope="col" className={`px-6 py-3 font-medium ${className}`}>
+             <button className="flex items-center uppercase w-full" onClick={() => requestSort(sortKey)} style={{ justifyContent: className.includes('text-right') ? 'flex-end' : 'flex-start' }}>
+                {children}
+                <SortIcon
+                    isActive={sortConfig?.key === sortKey}
+                    direction={sortConfig?.key === sortKey ? sortConfig.direction : null}
+                />
+            </button>
+        </th>
+    );
 
     return (
         <div className="bg-card border border-border rounded-xl">
@@ -50,20 +82,20 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
                 <table className="w-full text-sm text-left text-text-secondary">
                     <thead className="text-xs text-text-tertiary uppercase bg-background/50">
                         <tr>
-                            <th scope="col" className="px-6 py-3 font-medium">Holder</th>
-                            <th scope="col" className="px-6 py-3 font-medium text-right">Shares</th>
-                            {totalShares && <th scope="col" className="px-6 py-3 font-medium text-right">% Ownership</th>}
-                            <th scope="col" className="px-6 py-3 font-medium text-right">Reported</th>
+                            <SortableHeader sortKey="name">Holder</SortableHeader>
+                            <SortableHeader sortKey="share" className="text-right">Shares</SortableHeader>
+                            {stockData?.shareOutstanding && <SortableHeader sortKey="ownership" className="text-right">% Ownership</SortableHeader>}
+                            <SortableHeader sortKey="filingDate" className="text-right">Reported</SortableHeader>
                         </tr>
                     </thead>
                     <tbody>
-                        {shareholders.slice(0, 50).map((holder, index) => (
+                        {sortedShareholders.slice(0, 50).map((holder, index) => (
                             <tr key={`${holder.name}-${index}`} className="border-b border-border last:border-b-0 hover:bg-background">
                                 <td className="px-6 py-4 font-semibold text-text-primary whitespace-nowrap">{holder.name}</td>
                                 <td className="px-6 py-4 text-right whitespace-nowrap font-mono">{holder.share.toLocaleString()}</td>
-                                {totalShares && (
+                                {stockData?.shareOutstanding && (
                                     <td className="px-6 py-4 text-right whitespace-nowrap font-mono">
-                                        {((holder.share / (totalShares * 1_000_000)) * 100).toFixed(2)}%
+                                        {holder.ownership ? `${holder.ownership.toFixed(2)}%` : '--'}
                                     </td>
                                 )}
                                 <td className="px-6 py-4 text-right whitespace-nowrap">{holder.filingDate}</td>

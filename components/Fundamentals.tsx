@@ -1,8 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-// FIX: The member 'fetchFinancials' does not exist on the imported module. It has been replaced with the exported member 'fetchDetailedFinancialsAndMetrics'.
 import { fetchDetailedFinancialsAndMetrics } from '../services/finnhubService';
-// FIX: The member 'AnnualReport' does not exist on the imported module. It has been replaced with the exported member 'FinancialReportRow'.
 import type { FinancialReportRow } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
@@ -30,11 +28,9 @@ const formatValue = (value: number | string): string => {
 const FundamentalsContent: React.FC<FundamentalsProps> = ({ ticker }) => {
     const { data, isLoading, isError } = useQuery({
         queryKey: ['fundamentals', ticker],
-        // FIX: The function call was updated to use 'fetchDetailedFinancialsAndMetrics', which is an existing exported member.
         queryFn: () => fetchDetailedFinancialsAndMetrics(ticker),
     });
 
-    // FIX: The data structure returned by 'fetchDetailedFinancialsAndMetrics' is different. The logic has been updated to combine all financial report sections into a single array.
     const financials = data ? [
         ...data.incomeStatement,
         ...data.balanceSheet,

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -7,6 +8,7 @@ import type { NewsArticle, SentimentAnalysisResult } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 import FeatureGate from './FeatureGate';
+import { useSort } from '../hooks/useSort';
 
 interface NewsFeedProps {
     ticker: string;
@@ -89,6 +91,8 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
         queryFn: () => fetchNews(ticker),
     });
 
+    const { items: sortedNews, requestSort, sortConfig } = useSort(news, { key: 'publishedDate', direction: 'desc' });
+
     // Derive sentiment data directly from news articles using synchronous, client-side analysis.
     const sentimentData = React.useMemo(() => {
         if (!news || news.length === 0) {
@@ -101,19 +105,19 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
     const parentRef = React.useRef<HTMLDivElement>(null);
 
     const rowVirtualizer = useVirtualizer({
-        count: news?.length ?? 0,
+        count: sortedNews?.length ?? 0,
         getScrollElement: () => parentRef.current,
         estimateSize: () => 110, // Estimate the height of a news item
         overscan: 5,
     });
     
     const handleExport = () => {
-        if (!news || news.length === 0) return;
+        if (!sortedNews || sortedNews.length === 0) return;
 
         const headers = ['publishedDate', 'source', 'headline', 'summary', 'url'];
         const csvContent = [
             headers.join(','),
-            ...news.map(n =>
+            ...sortedNews.map(n =>
                 headers.map(header => escapeCsvValue(n[header as keyof NewsArticle])).join(',')
             )
         ].join('\n');
@@ -147,7 +151,7 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
             return <div className="text-center text-negative p-4">Could not load news articles.</div>;
         }
 
-        if (!news || news.length === 0) {
+        if (!sortedNews || sortedNews.length === 0) {
             return <div className="text-center text-text-secondary p-4">No recent news found for this ticker.</div>;
         }
 
@@ -155,7 +159,7 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
              <div ref={parentRef} className="h-full overflow-auto">
                 <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                     {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                        const article = news[virtualItem.index];
+                        const article = sortedNews[virtualItem.index];
                         return (
                             <div
                                 key={virtualItem.key}
@@ -187,11 +191,33 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
             </div>
         );
     };
+    
+    const SortButton: React.FC<{ sortKey: keyof NewsArticle; children: React.ReactNode }> = ({ sortKey, children }) => {
+        const isActive = sortConfig?.key === sortKey;
+        const directionIcon = isActive ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '';
+        return (
+            <button
+                onClick={() => requestSort(sortKey)}
+                className={`text-xs px-2 py-1 rounded-md transition-colors font-semibold ${isActive ? 'bg-accent/20 text-accent' : 'bg-transparent text-text-secondary hover:bg-background'}`}
+            >
+                {children} {directionIcon}
+            </button>
+        );
+    };
 
     return (
         <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
-             <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-text-primary">Latest News</h3>
+             <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <h3 className="text-lg font-semibold text-text-primary">Latest News</h3>
+                    {news && news.length > 0 && (
+                        <div className="flex items-center gap-2 border-l border-border pl-4">
+                            <span className="text-xs text-text-tertiary">Sort by:</span>
+                            <SortButton sortKey="publishedDate">Date</SortButton>
+                            <SortButton sortKey="source">Source</SortButton>
+                        </div>
+                    )}
+                </div>
                 {news && news.length > 0 && (
                      <FeatureGate requiredPlan={SubscriptionPlan.PRO}>
                         <button

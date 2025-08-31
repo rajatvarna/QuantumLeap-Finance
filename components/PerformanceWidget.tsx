@@ -28,7 +28,7 @@ const PerformanceCell: React.FC<{ value: number | null; isTicker?: boolean }> = 
 
 const PerformanceWidgetContent: React.FC<PerformanceWidgetProps> = ({ ticker }) => {
     const { data, isLoading, isError, error } = useQuery<PerformanceComparison, Error>({
-        queryKey: ['performance', ticker],
+        queryKey: ['performance', ticker, 'alphavantage'],
         queryFn: () => fetchPerformanceComparison(ticker),
     });
 
