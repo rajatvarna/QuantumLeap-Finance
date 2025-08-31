@@ -164,7 +164,8 @@ export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderT
     if (!API_KEY) throw new Error('Alpha Vantage API key is not configured.');
 
     try {
-        const url = `${BASE_URL}?function=INSIDER_TRANSACTIONS&symbol=${ticker}&apikey=${API_KEY}`;
+        // Explicitly request JSON data format to ensure consistency.
+        const url = `${BASE_URL}?function=INSIDER_TRANSACTIONS&symbol=${ticker}&datatype=json&apikey=${API_KEY}`;
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`API error: ${response.status} ${response.statusText}`);
@@ -172,25 +173,34 @@ export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderT
         
         const data = await response.json();
 
+        // Handle API rate limiting or error messages gracefully.
         if (data.Note || data['Error Message']) {
             console.warn(`Insider trading data fetch failed for ${ticker}:`, data.Note || data['Error Message']);
             return [];
         }
 
+        // Validate the structure of the response.
         if (!data.data || !Array.isArray(data.data)) {
             console.warn(`Unexpected response format for insider trading data for ${ticker}:`, data);
             return [];
         }
 
-        return data.data.slice(0, 100).map((t: any) => ({
-            name: t.insider,
-            share: 0, // Not provided by this endpoint (shares held after transaction)
-            change: parseInt(t.shares, 10), // Number of shares in transaction
-            transactionDate: t.transactionDate,
-            transactionPrice: parseFloat(t.price),
-            transactionCode: t.transactionCode,
-            value: parseFloat(t.total),
-        }));
+        // Map and parse the transaction data, ensuring data integrity.
+        return data.data.slice(0, 100).map((t: any) => {
+            const change = parseInt(t.shares, 10);
+            const transactionPrice = parseFloat(t.price);
+            const value = parseFloat(t.total);
+
+            return {
+                name: t.insider || 'N/A',
+                share: 0, // This specific endpoint does not provide shares held after transaction.
+                change: !isNaN(change) ? change : 0,
+                transactionDate: t.transactionDate || 'N/A',
+                transactionPrice: !isNaN(transactionPrice) ? transactionPrice : 0,
+                transactionCode: t.transactionCode || 'N/A',
+                value: !isNaN(value) ? value : 0,
+            };
+        });
 
     } catch (error) {
         console.error(`Error fetching insider transactions for ${ticker}:`, error);
