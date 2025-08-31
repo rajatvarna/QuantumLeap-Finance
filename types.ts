@@ -98,3 +98,13 @@ export interface PerformanceComparison {
     SPY: PerformanceData;
     QQQ: PerformanceData;
 }
+
+export interface InsiderTransaction {
+  name: string;
+  share: number; // shares held after
+  change: number; // shares transacted
+  transactionDate: string;
+  transactionPrice: number;
+  transactionCode: string;
+  value: number;
+}

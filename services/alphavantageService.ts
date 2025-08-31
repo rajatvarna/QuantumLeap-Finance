@@ -1,7 +1,7 @@
-import type { EarningsTranscript, PerformanceComparison, PerformanceData } from '../types';
+import type { EarningsTranscript, PerformanceComparison, PerformanceData, InsiderTransaction } from '../types';
 
 // Use a dedicated environment variable for the Alpha Vantage API key.
-const API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '8AWR3MD4RCVYWT1L';
+const API_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'XIAGUPO07P3BSVD5';
 const BASE_URL = 'https://www.alphavantage.co/query';
 
 interface AlphaVantageTimeSeries {
@@ -107,92 +107,153 @@ export const fetchPerformanceComparison = async (ticker: string): Promise<Perfor
 };
 
 /**
- * Fetches the latest earnings call transcript for a given stock ticker from Alpha Vantage.
- * Note: Alpha Vantage's free tier has limitations, and full transcript data is often a premium feature.
- * This function is structured to parse a detailed response should one be available.
- *
- * @param ticker The stock ticker symbol.
- * @returns A promise that resolves to the latest earnings transcript or null if not found.
+ * Fetches real earnings call transcripts from Alpha Vantage.
  */
 export const fetchLatestTranscript = async (ticker: string): Promise<EarningsTranscript | null> => {
-    if (!API_KEY) {
-        throw new Error('Alpha Vantage API key is not configured.');
-    }
-
-    // Alpha Vantage's public API for earnings transcripts is not well-documented or consistently available.
-    // The `EARNINGS` endpoint provides EPS data, which we will use.
-    // We will use a mock transcript text to demonstrate the UI feature, as full text is not reliably available on free tiers.
+    if (!API_KEY) throw new Error('Alpha Vantage API key is not configured.');
     
     try {
-        const url = `${BASE_URL}?function=EARNINGS&symbol=${ticker}&apikey=${API_KEY}`;
+        const url = `${BASE_URL}?function=EARNINGS_CALENDAR&symbol=${ticker}&horizon=3month&apikey=${API_KEY}`;
         const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(`Alpha Vantage API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        if (data.Note || data['Error Message']) {
-             console.warn('Alpha Vantage API call limit reached or error:', data.Note || data['Error Message']);
-             return null; // Return null to indicate no data, not a hard error.
-        }
-
-        const quarterlyEarnings = data?.quarterlyEarnings;
-
-        if (!quarterlyEarnings || quarterlyEarnings.length === 0) {
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        
+        // The endpoint returns CSV data.
+        const csvText = await response.text();
+        if (!csvText || csvText.startsWith('{')) { // Error responses are JSON
+            console.warn(`No earnings calendar data for ${ticker}.`);
             return null;
         }
 
-        // Find the most recent quarterly earnings report
-        const latestEarning = quarterlyEarnings.reduce((latest: any, current: any) => 
-            new Date(latest.fiscalDateEnding) > new Date(current.fiscalDateEnding) ? latest : current
-        );
+        const lines = csvText.trim().split('\n');
+        if (lines.length < 2) return null;
+
+        const latestEvent = lines[1].split(','); // Get the most recent event
+        const reportDate = latestEvent[2];
+        const reportedEPS = parseFloat(latestEvent[4]);
+        const quarterMatch = latestEvent[6]?.match(/Q(\d)(\d{4})/);
         
-        const [_, quarterStr] = latestEarning.fiscalDateEnding.match(/-(\d{2})-/) || [];
-        const quarter = quarterStr ? Math.ceil(parseInt(quarterStr, 10) / 3) : 0;
+        if (!quarterMatch) return null;
+
+        const [, qtr, year] = quarterMatch;
+        const quarter = parseInt(qtr);
+
+        // Now, fetch the full transcript
+        const transcriptUrl = `${BASE_URL}?function=TRANSCRIPT&symbol=${ticker}&quarter=Q${quarter}${year}&apikey=${API_KEY}`;
+        const transcriptResponse = await fetch(transcriptUrl);
+        const transcriptData = await transcriptResponse.json();
+
+        if (transcriptData.Note || transcriptData['Error Message'] || !transcriptData.transcript) {
+            console.warn(`Could not fetch full transcript for ${ticker} Q${quarter} ${year}`);
+            return null;
+        }
         
-        // MOCK TRANSCRIPT DATA - as full text is a premium feature.
-        const mockTranscript = `
-Operator: Good day, and welcome to the ${data.symbol} Q${quarter} ${new Date(latestEarning.fiscalDateEnding).getFullYear()} Earnings Conference Call. Today's conference is being recorded. At this time, I would like to turn the conference over to the Head of Investor Relations. Please go ahead.
-
-Head of IR: Thank you. Good afternoon, and welcome to ${data.symbol}'s earnings conference call for the quarter ending ${latestEarning.fiscalDateEnding}. With me today are our CEO and CFO.
-
-Our CEO will begin with a review of the quarter's performance, and our CFO will cover the financial results in more detail before we open the call for questions.
-
-...
-
-[This is a demonstrative transcript. Full text access from financial data providers is typically a premium feature. This view showcases how a full transcript would be displayed in the UI.]
-
-...
-
-CFO: Thank you. Now, let's discuss our financial performance for the quarter. We reported a revenue of [Revenue Figure] and a reported EPS of ${latestEarning.reportedEPS}, which aligns with our projections. Our net income was [Net Income Figure], reflecting strong operational efficiency. We remain optimistic about our growth trajectory and are committed to delivering shareholder value.
-
-We will now open the call for your questions.
-
-Operator: Thank you. [Operator Instructions] Our first question comes from the line of [Analyst Name] with [Firm Name]. Please proceed with your question.
-
-Analyst: Thank you for taking my question. Could you provide more color on the key drivers for the revenue growth this quarter?
-
-CEO: Certainly. Our growth was primarily driven by strong performance in our [Product/Service] segment, which saw a significant increase in customer adoption. We also expanded our market share in key international regions. We believe these trends are sustainable and will continue to fuel our growth in the coming quarters.
-
-...
-
-[End of demonstrative transcript.]
-        `.trim();
-
+        const formattedTranscript = transcriptData.transcript.map(
+            (entry: { participant: string; dialogue: string }) => `${entry.participant}:\n${entry.dialogue}`
+        ).join('\n\n');
 
         return {
-            symbol: data.symbol,
+            symbol: ticker,
             quarter: quarter,
-            year: new Date(latestEarning.fiscalDateEnding).getFullYear(),
-            date: latestEarning.fiscalDateEnding,
-            eps: parseFloat(latestEarning.reportedEPS),
-            transcript: mockTranscript,
+            year: parseInt(year),
+            date: reportDate,
+            eps: reportedEPS,
+            transcript: formattedTranscript,
         };
+    } catch (error) {
+        console.error("Error fetching or parsing Alpha Vantage transcript data:", error);
+        throw error;
+    }
+};
+
+
+/**
+ * A robust CSV line parser that handles quoted fields containing commas.
+ * @param line - A single line from a CSV file.
+ * @returns An array of strings representing the fields.
+ */
+const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        const nextChar = line[i+1];
+
+        if (char === '"' && inQuotes && nextChar === '"') { // Handle escaped quote
+            current += '"';
+            i++; // Skip next quote
+        } else if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    result.push(current);
+    return result;
+};
+
+
+/**
+ * Fetches insider trading transactions from Alpha Vantage.
+ */
+export const fetchInsiderTransactions = async (ticker: string): Promise<InsiderTransaction[]> => {
+    if (!API_KEY) throw new Error('Alpha Vantage API key is not configured.');
+
+    try {
+        const url = `${BASE_URL}?function=INSIDER_TRADING&symbol=${ticker}&apikey=${API_KEY}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const text = await response.text();
+        
+        // Handle API errors which might not be JSON
+        if (!text.trim().startsWith('symbol,name,share,change')) {
+            try {
+                const errorJson = JSON.parse(text);
+                 if (errorJson.Note || errorJson['Error Message']) {
+                    console.warn(`Insider trading data fetch failed for ${ticker}:`, errorJson.Note || errorJson['Error Message']);
+                    return [];
+                }
+            } catch (e) {
+                console.error(`Unexpected response for insider trading data for ${ticker}:`, text.substring(0, 200));
+                return [];
+            }
+        }
+
+        const lines = text.trim().split('\n');
+        if (lines.length < 2) return [];
+
+        const headers = lines[0].split(',').map(h => h.trim());
+
+        const data = lines.slice(1).map(line => {
+            const values = parseCsvLine(line);
+            if (values.length !== headers.length) {
+                console.warn("Skipping malformed CSV line:", line);
+                return null;
+            }
+            const entry: any = {};
+            headers.forEach((header, i) => {
+                const value = values[i] || '';
+                entry[header] = value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
+            });
+            return entry;
+        }).filter(Boolean) as any[];
+
+
+        return data.slice(0, 100).map((t: any) => ({
+            name: t.name,
+            share: parseInt(t.share),
+            change: parseInt(t.change),
+            transactionDate: t.transactionDate,
+            transactionPrice: parseFloat(t.transactionPrice),
+            transactionCode: t.transactionCode,
+            value: Math.abs(parseInt(t.change) * parseFloat(t.transactionPrice)),
+        }));
 
     } catch (error) {
-        console.error("Error fetching or parsing Alpha Vantage data:", error);
-        throw error; // Re-throw to be caught by React Query
+        console.error(`Error fetching insider transactions for ${ticker}:`, error);
+        throw error;
     }
 };
