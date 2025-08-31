@@ -110,7 +110,7 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
     const handleExport = () => {
         if (!news || news.length === 0) return;
 
-        const headers = ['publishedDate', 'source', 'headline', 'summary'];
+        const headers = ['publishedDate', 'source', 'headline', 'summary', 'url'];
         const csvContent = [
             headers.join(','),
             ...news.map(n =>
@@ -173,9 +173,9 @@ const NewsFeed: React.FC<NewsFeedProps> = ({ ticker }) => {
                                     <div className="text-xs text-text-tertiary mb-1">
                                         <span>{article.publishedDate}</span> - <span>{article.source}</span>
                                     </div>
-                                    <h4 className="font-semibold text-text-primary hover:text-accent cursor-pointer truncate">
+                                    <a href={article.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-text-primary hover:text-accent cursor-pointer block truncate">
                                         {article.headline}
-                                    </h4>
+                                    </a>
                                     <p className="text-sm text-text-secondary mt-1 overflow-hidden text-ellipsis" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                                         {article.summary}
                                     </p>

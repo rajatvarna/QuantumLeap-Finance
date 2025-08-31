@@ -243,6 +243,7 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
         source: n.source,
         headline: n.headline,
         summary: n.summary,
+        url: n.url,
     }));
 };
 

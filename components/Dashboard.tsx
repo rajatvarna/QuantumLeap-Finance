@@ -10,6 +10,7 @@ import FinancialsView from './FinancialsView';
 import TranscriptsView from './TranscriptsView';
 import ShareholdersView from './ShareholdersView';
 import SkeletonLoader from './SkeletonLoader';
+import PerformanceWidget from './PerformanceWidget';
 
 
 interface DashboardProps {
@@ -78,8 +79,9 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                             <StockChart ticker={ticker} />
                             <NewsFeed ticker={ticker} />
                         </div>
-                        <div className="grid grid-cols-1">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                              <FilingsTable ticker={ticker} />
+                             <PerformanceWidget ticker={ticker} />
                         </div>
                     </div>
                 );

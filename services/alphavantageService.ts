@@ -1,4 +1,4 @@
-import type { EarningsTranscript } from '../types';
+import type { EarningsTranscript, PerformanceComparison, PerformanceData } from '../types';
 
 // Use a dedicated environment variable for the Alpha Vantage API key.
 const API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '8AWR3MD4RCVYWT1L';
@@ -92,5 +92,96 @@ CEO: Certainly. Our growth was primarily driven by strong performance in our [Pr
     } catch (error) {
         console.error("Error fetching or parsing Alpha Vantage data:", error);
         throw error; // Re-throw to be caught by React Query
+    }
+};
+
+const calculatePerformance = (timeSeries: Record<string, any>): PerformanceData => {
+    const sortedDates = Object.keys(timeSeries).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    if (sortedDates.length < 2) return {};
+
+    const findPriceOnOrBefore = (targetDate: Date): number | null => {
+        const targetDateString = targetDate.toISOString().split('T')[0];
+        const date = sortedDates.find(d => d <= targetDateString);
+        return date ? parseFloat(timeSeries[date]['5. adjusted close']) : null;
+    };
+
+    const latestPrice = parseFloat(timeSeries[sortedDates[0]]['5. adjusted close']);
+    if (isNaN(latestPrice)) return {};
+    
+    const results: PerformanceData = {};
+    const today = new Date(sortedDates[0]);
+
+    const calcReturn = (pastDate: Date): number | null => {
+        const pastPrice = findPriceOnOrBefore(pastDate);
+        if (pastPrice && latestPrice) {
+            return ((latestPrice - pastPrice) / pastPrice) * 100;
+        }
+        return null;
+    };
+
+    let pastDate: Date;
+
+    pastDate = new Date(today); pastDate.setDate(today.getDate() - 7);
+    results['1W'] = calcReturn(pastDate);
+
+    pastDate = new Date(today); pastDate.setMonth(today.getMonth() - 1);
+    results['1M'] = calcReturn(pastDate);
+    
+    pastDate = new Date(today); pastDate.setMonth(today.getMonth() - 3);
+    results['3M'] = calcReturn(pastDate);
+
+    pastDate = new Date(today); pastDate.setMonth(today.getMonth() - 6);
+    results['6M'] = calcReturn(pastDate);
+
+    const startOfYear = new Date(today.getFullYear() - 1, 11, 31);
+    results['YTD'] = calcReturn(startOfYear);
+
+    pastDate = new Date(today); pastDate.setFullYear(today.getFullYear() - 1);
+    results['1Y'] = calcReturn(pastDate);
+
+    pastDate = new Date(today); pastDate.setFullYear(today.getFullYear() - 3);
+    results['3Y'] = calcReturn(pastDate);
+
+    pastDate = new Date(today); pastDate.setFullYear(today.getFullYear() - 5);
+    results['5Y'] = calcReturn(pastDate);
+
+    return results;
+};
+
+const fetchDailyAdjusted = async (symbol: string): Promise<any> => {
+    const url = `${BASE_URL}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&apikey=${API_KEY}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Alpha Vantage API error for ${symbol}: ${response.status}`);
+    }
+    const data = await response.json();
+    if (data.Note || data['Error Message']) {
+        throw new Error(`Alpha Vantage API error for ${symbol}: ${data.Note || data['Error Message']}`);
+    }
+    const timeSeries = data['Time Series (Daily)'];
+    if (!timeSeries) {
+        throw new Error(`No time series data found for ${symbol}.`);
+    }
+    return timeSeries;
+};
+
+export const fetchPerformanceComparison = async (ticker: string): Promise<PerformanceComparison> => {
+    try {
+        const [tickerSeries, spySeries, qqqSeries] = await Promise.all([
+            fetchDailyAdjusted(ticker),
+            fetchDailyAdjusted('SPY'),
+            fetchDailyAdjusted('QQQ')
+        ]);
+        
+        const result: PerformanceComparison = {
+            [ticker]: calculatePerformance(tickerSeries),
+            SPY: calculatePerformance(spySeries),
+            QQQ: calculatePerformance(qqqSeries),
+        };
+
+        return result;
+    } catch (error) {
+        console.error("Error fetching performance comparison data:", error);
+        throw error;
     }
 };

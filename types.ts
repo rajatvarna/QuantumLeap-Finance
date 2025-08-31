@@ -21,6 +21,7 @@ export interface NewsArticle {
     source: string;
     headline: string;
     summary: string;
+    url: string;
 }
 
 export interface SentimentAnalysisResult {
@@ -86,4 +87,14 @@ export interface Shareholder {
     share: number;
     change: number;
     filingDate: string;
+}
+
+export interface PerformanceData {
+    [period: string]: number | null;
+}
+
+export interface PerformanceComparison {
+    [ticker: string]: PerformanceData;
+    SPY: PerformanceData;
+    QQQ: PerformanceData;
 }
