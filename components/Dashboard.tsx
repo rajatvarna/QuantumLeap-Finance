@@ -1,6 +1,6 @@
 
 
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchStockData } from '../services/finnhubService';
 import StockHeader from './StockHeader';
@@ -8,26 +8,14 @@ import StockChart from './StockChart';
 import FilingsTable from './FilingsTable';
 import NewsFeed from './NewsFeed';
 import SkeletonLoader from './SkeletonLoader';
-import PerformanceWidget from './PerformanceWidget';
 import TradingViewAdvancedWidgets from './TradingViewAdvancedWidgets';
-
-// Lazy load tab components for better initial performance
-const FinancialsView = lazy(() => import('./FinancialsView'));
-const TranscriptsView = lazy(() => import('./TranscriptsView'));
-const InsiderTransactionsView = lazy(() => import('./InsiderTransactionsView'));
-const PeerPerformanceView = lazy(() => import('./PeerPerformanceView'));
-
+import FinancialsView from './FinancialsView';
+import TranscriptsView from './TranscriptsView';
+import InsiderTransactionsView from './InsiderTransactionsView';
 
 interface DashboardProps {
     ticker: string;
 }
-
-const TabContentLoader: React.FC = () => (
-    <div className="mt-6">
-        <SkeletonLoader className="h-[500px] w-full rounded-xl" />
-    </div>
-);
-
 
 const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
     const [activeTab, setActiveTab] = useState('Overview');
@@ -63,7 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             
         return (
             <div className="p-6 bg-card rounded-xl border border-negative/50 text-center">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-negative/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                 <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-negative/70" fill="none" viewBox="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
                 <h3 className="mt-4 text-lg font-semibold text-text-primary">Could not load data</h3>
@@ -79,7 +67,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
         );
     }
 
-    const tabs = ['Overview', 'Financials', 'Transcripts', 'Insider Activity', 'Peers'];
+    const tabs = ['Overview', 'Financials', 'Transcripts', 'Insider Activity'];
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -89,8 +77,6 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                 return <TranscriptsView ticker={ticker} />;
             case 'Insider Activity':
                 return <InsiderTransactionsView ticker={ticker} />;
-            case 'Peers':
-                return <PeerPerformanceView ticker={ticker} />;
             case 'Overview':
             default:
                 return (
@@ -100,9 +86,8 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                             <NewsFeed ticker={ticker} />
                         </div>
                         <TradingViewAdvancedWidgets ticker={ticker} />
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 gap-8">
                              <FilingsTable ticker={ticker} />
-                             <PerformanceWidget ticker={ticker} />
                         </div>
                     </div>
                 );
@@ -133,9 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             </div>
             
             <div className="mt-6">
-                <Suspense fallback={<TabContentLoader />}>
-                    {renderTabContent()}
-                </Suspense>
+                {renderTabContent()}
             </div>
         </div>
     );

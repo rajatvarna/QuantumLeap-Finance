@@ -34,7 +34,9 @@ const PeerPerformanceChart: React.FC<{ ticker: string; peers: string[] }> = memo
             
             const symbols = [
                 { "s": ticker, "d": `${ticker} (Primary)` },
-                ...peers.slice(0, 5).map(p => ({ "s": p, "d": p })) // Limit to 5 peers for clarity
+                ...peers.slice(0, 5).map(p => ({ "s": p, "d": p })), // Keep top 5 peers
+                { "s": "SPY", "d": "S&P 500" },
+                { "s": "QQQ", "d": "Nasdaq 100" }
             ];
             
             script.innerHTML = JSON.stringify({
@@ -112,7 +114,7 @@ const PeerPerformanceViewContent: React.FC<PeerPerformanceViewProps> = ({ ticker
     return (
         <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
              <div className="p-4 sm:p-6 border-b border-border">
-                <h3 className="text-lg font-semibold text-text-primary">Performance vs. Peers (1Y)</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Performance vs. Peers & Indices (1Y)</h3>
             </div>
             <div className="flex-grow p-1">
                 <PeerPerformanceChart ticker={ticker} peers={peers} />

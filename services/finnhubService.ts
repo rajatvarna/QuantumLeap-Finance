@@ -246,6 +246,14 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
     }));
 };
 
+// Fix: Add fetchPeers function to get company peers for comparison charts.
+export const fetchPeers = async (ticker: string): Promise<string[]> => {
+    const peers = await apiFetch<string[]>(`/stock/peers?symbol=${ticker}`);
+    if (!peers) return [];
+    // The first peer is often the ticker itself, ensure it's removed.
+    return peers.filter(p => p.toLowerCase() !== ticker.toLowerCase());
+};
+
 // Fix: Add fetchShareholders function to retrieve institutional ownership data.
 export const fetchShareholders = async (ticker: string): Promise<Shareholder[]> => {
     // Fetch top 50 institutional shareholders
@@ -454,14 +462,4 @@ export const fetchLatestTranscript = async (ticker: string): Promise<EarningsTra
     eps: matchingEarning?.actual ?? NaN, // Use NaN if EPS is not found
     transcript: formattedTranscript,
   };
-};
-
-/**
- * Fetches a list of industry peer tickers from Finnhub.
- */
-export const fetchPeers = async (ticker: string): Promise<string[]> => {
-    const peers = await apiFetch<string[]>(`/stock/peers?symbol=${ticker}`);
-    if (!peers) return [];
-    // The first peer returned by the API is often the ticker itself, so we filter it out.
-    return peers.filter(p => p.toLowerCase() !== ticker.toLowerCase());
 };

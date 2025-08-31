@@ -82,16 +82,6 @@ export interface EarningsTranscript {
     transcript: string;
 }
 
-export interface PerformanceData {
-    [period: string]: number | null;
-}
-
-export interface PerformanceComparison {
-    [ticker: string]: PerformanceData;
-    SPY: PerformanceData;
-    QQQ: PerformanceData;
-}
-
 export interface InsiderTransaction {
   name: string;
   share: number; // shares held after
@@ -106,4 +96,10 @@ export interface Shareholder {
     name: string;
     share: number;
     filingDate: string;
+}
+// Fix: Add PerformanceComparison interface to define the structure for performance data used in PerformanceWidget.
+export interface PerformanceComparison {
+    [ticker: string]: {
+        [period: string]: number | null;
+    };
 }
