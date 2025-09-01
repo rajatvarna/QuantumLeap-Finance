@@ -8,7 +8,8 @@ import StockChart from './StockChart';
 import FilingsTable from './FilingsTable';
 import NewsFeed from './NewsFeed';
 import SkeletonLoader from './SkeletonLoader';
-import TradingViewAdvancedWidgets from './TradingViewAdvancedWidgets';
+import TechnicalAnalysisWidget from './TradingViewAdvancedWidgets';
+import CompanyProfileWidget from './CompanyProfileWidget';
 import FinancialsView from './FinancialsView';
 import TranscriptsView from './TranscriptsView';
 import InsiderTransactionsView from './InsiderTransactionsView';
@@ -79,16 +80,16 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             case 'Overview':
                 return (
                     <div className="space-y-8">
-                        <CompanyOverview ticker={ticker} />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <CompanyProfileWidget ticker={ticker} />
+                            <NewsFeed ticker={ticker} />
+                        </div>
                         <StockChart ticker={ticker} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <FilingsTable ticker={ticker} />
                             <AnalystRatings ticker={ticker} />
                         </div>
-                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <NewsFeed ticker={ticker} />
-                            <PerformanceWidget ticker={ticker} />
-                        </div>
+                        <CompanyOverview ticker={ticker} />
                     </div>
                 );
             case 'Financials':
@@ -109,7 +110,10 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                  return (
                     <div className="space-y-8">
                         <PeerPerformanceView ticker={ticker} />
-                        <TradingViewAdvancedWidgets ticker={ticker} />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <PerformanceWidget ticker={ticker} />
+                            <TechnicalAnalysisWidget ticker={ticker} />
+                        </div>
                     </div>
                 );
             default:

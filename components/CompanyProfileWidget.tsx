@@ -25,7 +25,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({ ticker, widg
             }
 
             const script = document.createElement('script');
-            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-symbol-profile.js';
             script.async = true;
             script.innerHTML = JSON.stringify({
                 ...widgetOptions,
@@ -58,31 +58,28 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = memo(({ ticker, widg
     return <div ref={containerRef} className="h-full w-full" />;
 });
 
-
-interface TechnicalAnalysisWidgetProps {
+interface CompanyProfileWidgetProps {
     ticker: string;
 }
 
-const TechnicalAnalysisWidget: React.FC<TechnicalAnalysisWidgetProps> = ({ ticker }) => {
-    const techAnalysisOptions = {
-        interval: "1D",
+const CompanyProfileWidget: React.FC<CompanyProfileWidgetProps> = ({ ticker }) => {
+    const profileOptions = {
         width: "100%",
         height: "100%",
         isTransparent: true,
-        showIntervalTabs: true,
         locale: "en",
     };
 
     return (
         <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
             <div className="p-4 sm:p-6 border-b border-border">
-                <h3 className="text-lg font-semibold text-text-primary">Technical Analysis</h3>
+                <h3 className="text-lg font-semibold text-text-primary">Company Profile</h3>
             </div>
-            <div className="flex-grow p-1">
-                <TradingViewWidget ticker={ticker} widgetOptions={techAnalysisOptions} />
+             <div className="flex-grow p-1">
+                 <TradingViewWidget ticker={ticker} widgetOptions={profileOptions} />
             </div>
         </div>
     );
 };
 
-export default memo(TechnicalAnalysisWidget);
+export default memo(CompanyProfileWidget);
