@@ -16,8 +16,6 @@ import InsiderTransactionsView from './InsiderTransactionsView';
 import AnalystRatings from './AnalystRatings';
 import CompanyOverview from './CompanyOverview';
 import ShareholdersView from './ShareholdersView';
-import PeerPerformanceView from './PeerPerformanceView';
-import PerformanceWidget from './PerformanceWidget';
 
 interface DashboardProps {
     ticker: string;
@@ -109,11 +107,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             case 'Analysis':
                  return (
                     <div className="space-y-8">
-                        <PeerPerformanceView ticker={ticker} />
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <PerformanceWidget ticker={ticker} />
-                            <TechnicalAnalysisWidget ticker={ticker} />
-                        </div>
+                        <TechnicalAnalysisWidget ticker={ticker} />
                     </div>
                 );
             default:

@@ -97,12 +97,6 @@ export interface Shareholder {
     share: number;
     filingDate: string;
 }
-// Fix: Add PerformanceComparison interface to define the structure for performance data used in PerformanceWidget.
-export interface PerformanceComparison {
-    [ticker: string]: {
-        [period: string]: number | null;
-    };
-}
 
 export interface AnalystRating {
     period: string;
