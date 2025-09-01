@@ -103,3 +103,12 @@ export interface PerformanceComparison {
         [period: string]: number | null;
     };
 }
+
+export interface AnalystRating {
+    period: string;
+    strongBuy: number;
+    buy: number;
+    hold: number;
+    sell: number;
+    strongSell: number;
+}

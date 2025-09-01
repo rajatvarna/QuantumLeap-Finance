@@ -12,6 +12,11 @@ import TradingViewAdvancedWidgets from './TradingViewAdvancedWidgets';
 import FinancialsView from './FinancialsView';
 import TranscriptsView from './TranscriptsView';
 import InsiderTransactionsView from './InsiderTransactionsView';
+import AnalystRatings from './AnalystRatings';
+import CompanyOverview from './CompanyOverview';
+import ShareholdersView from './ShareholdersView';
+import PeerPerformanceView from './PeerPerformanceView';
+import PerformanceWidget from './PerformanceWidget';
 
 interface DashboardProps {
     ticker: string;
@@ -53,12 +58,12 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
             <div className="p-6 bg-card rounded-xl border border-negative/50 text-center">
                  <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-negative/70" fill="none" viewBox="http://www.w3.org/2000/svg" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
-                <h3 className="mt-4 text-lg font-semibold text-text-primary">Could not load data</h3>
-                <p className="mt-2 text-text-secondary">{errorMessage}</p>
-                <button
+                 </svg>
+                 <h3 className="mt-4 text-lg font-semibold text-text-primary">An Error Occurred</h3>
+                 <p className="mt-1 text-sm text-negative">{errorMessage}</p>
+                 <button
                     onClick={() => refetch()}
-                    className="mt-4 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
+                    className="mt-6 bg-accent hover:bg-accent-hover text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
                     aria-label="Retry fetching data"
                 >
                     Retry
@@ -67,30 +72,48 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
         );
     }
 
-    const tabs = ['Overview', 'Financials', 'Transcripts', 'Insider Activity'];
+    const tabs = ['Overview', 'Financials', 'Ownership', 'Analysis'];
 
-    const renderTabContent = () => {
+    const renderContent = () => {
         switch (activeTab) {
-            case 'Financials':
-                return <FinancialsView ticker={ticker} />;
-            case 'Transcripts':
-                return <TranscriptsView ticker={ticker} />;
-            case 'Insider Activity':
-                return <InsiderTransactionsView ticker={ticker} />;
             case 'Overview':
-            default:
                 return (
                     <div className="space-y-8">
+                        <CompanyOverview ticker={ticker} />
+                        <StockChart ticker={ticker} />
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <StockChart ticker={ticker} />
-                            <NewsFeed ticker={ticker} />
+                            <FilingsTable ticker={ticker} />
+                            <AnalystRatings ticker={ticker} />
                         </div>
-                        <TradingViewAdvancedWidgets ticker={ticker} />
-                        <div className="grid grid-cols-1 gap-8">
-                             <FilingsTable ticker={ticker} />
+                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <NewsFeed ticker={ticker} />
+                            <PerformanceWidget ticker={ticker} />
                         </div>
                     </div>
                 );
+            case 'Financials':
+                return (
+                     <div className="space-y-8">
+                        <FinancialsView ticker={ticker} />
+                        <TranscriptsView ticker={ticker} />
+                    </div>
+                );
+            case 'Ownership':
+                return (
+                    <div className="space-y-8">
+                        <ShareholdersView ticker={ticker} />
+                        <InsiderTransactionsView ticker={ticker} />
+                    </div>
+                );
+            case 'Analysis':
+                 return (
+                    <div className="space-y-8">
+                        <PeerPerformanceView ticker={ticker} />
+                        <TradingViewAdvancedWidgets ticker={ticker} />
+                    </div>
+                );
+            default:
+                return null;
         }
     };
 
@@ -98,8 +121,8 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
         <div className="space-y-8">
             <StockHeader ticker={ticker} />
 
-            <div className="border-b border-border">
-                <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+            <div className="border-b border-border sticky top-[72px] bg-background/80 backdrop-blur-sm z-30">
+                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                     {tabs.map((tab) => (
                         <button
                             key={tab}
@@ -116,9 +139,9 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                     ))}
                 </nav>
             </div>
-            
-            <div className="mt-6">
-                {renderTabContent()}
+
+            <div className="mt-8">
+                {renderContent()}
             </div>
         </div>
     );

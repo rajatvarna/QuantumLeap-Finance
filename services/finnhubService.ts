@@ -1,5 +1,5 @@
 // Fix: Add Shareholder and InsiderTransaction to the type imports.
-import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder, InsiderTransaction, EarningsTranscript } from '../types';
+import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder, InsiderTransaction, EarningsTranscript, AnalystRating } from '../types';
 
 // Using a fresh, valid public sandbox API key to ensure the application is functional for demonstration.
 // This resolves authentication issues for both the REST API and the WebSocket connection.
@@ -243,6 +243,20 @@ export const fetchNews = async (ticker: string): Promise<NewsArticle[]> => {
         headline: n.headline,
         summary: n.summary,
         url: n.url,
+    }));
+};
+
+export const fetchAnalystRatings = async (ticker: string): Promise<AnalystRating[]> => {
+    const ratings = await apiFetch<any[]>(`/stock/recommendation?symbol=${ticker}`);
+    if (!ratings) return [];
+    
+    return ratings.slice(0, 12).map(r => ({
+        period: r.period,
+        strongBuy: r.strongBuy,
+        buy: r.buy,
+        hold: r.hold,
+        sell: r.sell,
+        strongSell: r.strongSell,
     }));
 };
 
