@@ -5,6 +5,7 @@ import type { AnalystRating } from '../types';
 import { SubscriptionPlan } from '../types';
 import SkeletonLoader from './SkeletonLoader';
 import FeatureGate from './FeatureGate';
+import PricePerformance from './PricePerformance';
 
 interface AnalystRatingsProps {
     ticker: string;
@@ -123,6 +124,8 @@ const AnalystRatingsContent: React.FC<AnalystRatingsProps> = ({ ticker }) => {
                     <div className="flex items-center"><span className="w-2 h-2 rounded-full bg-red-600 mr-1.5"></span>Strong Sell ({latestRating.strongSell})</div>
                  </div>
             </div>
+            
+            <PricePerformance ticker={ticker} />
 
             {/* Historical Trends Chart */}
             <div className="flex-grow flex flex-col min-h-0">

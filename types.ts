@@ -106,3 +106,16 @@ export interface AnalystRating {
     sell: number;
     strongSell: number;
 }
+
+export interface HistoricalPriceData {
+    date: string;
+    close: number;
+}
+
+export interface PeerComparisonData {
+    ticker: string;
+    companyName: string;
+    marketCap: number;
+    peRatio?: number | null;
+    ytdPerformance: number | null;
+}

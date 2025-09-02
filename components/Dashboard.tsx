@@ -16,6 +16,8 @@ import InsiderTransactionsView from './InsiderTransactionsView';
 import AnalystRatings from './AnalystRatings';
 import CompanyOverview from './CompanyOverview';
 import ShareholdersView from './ShareholdersView';
+import PerformanceVsIndicesWidget from './PerformanceVsIndicesWidget';
+import PeerComparisonWidget from './PeerComparisonWidget';
 
 interface DashboardProps {
     ticker: string;
@@ -71,7 +73,7 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
         );
     }
 
-    const tabs = ['Overview', 'Financials', 'Ownership', 'Analysis'];
+    const tabs = ['Overview', 'Financials', 'Ownership', 'Analysis', 'Performance'];
 
     const renderContent = () => {
         switch (activeTab) {
@@ -108,6 +110,13 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
                  return (
                     <div className="space-y-8">
                         <TechnicalAnalysisWidget ticker={ticker} />
+                    </div>
+                );
+            case 'Performance':
+                return (
+                    <div className="space-y-8">
+                        <PerformanceVsIndicesWidget ticker={ticker} />
+                        <PeerComparisonWidget ticker={ticker} />
                     </div>
                 );
             default:

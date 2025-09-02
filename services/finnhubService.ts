@@ -1,5 +1,5 @@
 // Fix: Add Shareholder and InsiderTransaction to the type imports.
-import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder, InsiderTransaction, EarningsTranscript, AnalystRating } from '../types';
+import type { Filing, NewsArticle, StockData, SearchResult, DetailedFinancials, FinancialReportRow, Shareholder, InsiderTransaction, EarningsTranscript, AnalystRating, HistoricalPriceData } from '../types';
 
 // Using a fresh, valid public sandbox API key to ensure the application is functional for demonstration.
 // This resolves authentication issues for both the REST API and the WebSocket connection.
@@ -258,6 +258,34 @@ export const fetchAnalystRatings = async (ticker: string): Promise<AnalystRating
         sell: r.sell,
         strongSell: r.strongSell,
     }));
+};
+
+interface FinnhubCandle {
+    c: number[]; // close
+    h: number[]; // high
+    l: number[]; // low
+    o: number[]; // open
+    s: 'ok' | 'no_data'; // status
+    t: number[]; // timestamp
+    v: number[]; // volume
+}
+
+export const fetchHistoricalCandles = async (ticker: string, from: number, to: number): Promise<HistoricalPriceData[]> => {
+    const candles = await apiFetch<FinnhubCandle>(`/stock/candle?symbol=${ticker}&resolution=D&from=${from}&to=${to}`);
+
+    if (!candles || candles.s === 'no_data' || !candles.c) {
+        return [];
+    }
+
+    const result: HistoricalPriceData[] = [];
+    for (let i = 0; i < candles.c.length; i++) {
+        result.push({
+            date: new Date(candles.t[i] * 1000).toISOString().split('T')[0],
+            close: candles.c[i],
+        });
+    }
+
+    return result;
 };
 
 // Fix: Add fetchPeers function to get company peers for comparison charts.
