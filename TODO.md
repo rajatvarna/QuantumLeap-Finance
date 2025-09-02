@@ -59,3 +59,32 @@
 -   [ ] **Centralize Type Definitions**
     -   **Action:** As part of a monorepo migration, move the contents of `types.ts` to a shared library (`/libs/common-types`) so that both frontend and backend services can use the same, single source of truth for data structures.
     -   **Files Affected:** `types.ts`.
+
+---
+
+### Phase 4: Future Feature Enhancements (Priority: High)
+
+*Goal: Elevate the core user experience by adding advanced, high-value features that provide deeper insights and personalization.*
+
+-   [ ] **Dashboard & Data Visualization**
+    -   **Action:** Implement a customizable "Overview" tab where users can drag, drop, and resize widgets.
+    -   **Action:** Enhance the `StockChart` with interactive overlays for key events like earnings dates, news, and analyst rating changes.
+    -   **Action:** Create a comprehensive "Key Stats" module with additional data points like 52-week high/low, average volume, and dividend yield.
+
+-   [ ] **Financials & Analysis**
+    -   **Action:** Add inline micro-charts (bar or line) to the `FinancialsView` for key metrics like Revenue and Net Income to visualize trends.
+    -   **Action:** Integrate Gemini API to provide an AI-powered summary and "Red Flag" analysis on the Financials tab.
+    -   **Action:** Implement info tooltips for complex financial terms to improve accessibility for novice users.
+
+-   [ ] **News & Sentiment**
+    -   **Action:** Develop a chart to visualize news sentiment over time (e.g., last 90 days) to track media tone trends.
+    -   **Action:** Add advanced filtering to the `NewsFeed` (e.g., by source, category) and an AI-powered summarization feature.
+
+-   [ ] **Performance & Comparison**
+    -   **Action:** Allow "Pro" users to create and save custom peer groups for more tailored comparisons.
+    -   **Action:** Add a visual scatter plot to the `Performance` tab to compare peers on two selectable metrics (e.g., P/E Ratio vs. YTD Performance).
+
+-   [ ] **Platform-Wide Features**
+    -   **Action:** Implement a user-specific Watchlist feature to allow users to create and manage multiple lists of stocks.
+    -   **Action:** Build an alert system for user-defined triggers (e.g., price targets, new filings, unusual volume).
+    -   **Action:** Create a "Command Palette" (`Cmd+K`) for power users to enable fast navigation and actions.
