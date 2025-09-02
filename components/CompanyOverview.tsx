@@ -33,7 +33,7 @@ const CompanyOverview: React.FC<CompanyOverviewProps> = ({ ticker }) => {
 
 
     return (
-        <div className="bg-card border border-border rounded-xl shadow-lg transition-colors duration-300">
+        <div className="bg-card border border-border rounded-xl shadow-sm transition-colors duration-300">
             <div className="p-4 sm:p-6 border-b border-border">
                 <h3 className="text-lg font-semibold text-text-primary">Company Overview</h3>
             </div>

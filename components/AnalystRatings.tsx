@@ -45,6 +45,13 @@ const AnalystRatingsContent: React.FC<AnalystRatingsProps> = ({ ticker }) => {
         queryFn: () => fetchAnalystRatings(ticker),
     });
 
+    const [isAnimated, setIsAnimated] = React.useState(false);
+    React.useEffect(() => {
+        // Trigger animation shortly after mount
+        const timer = setTimeout(() => setIsAnimated(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
+
     if (isLoading) {
         return (
             <div className="p-4 sm:p-6 space-y-4 h-full flex flex-col">
@@ -129,7 +136,10 @@ const AnalystRatingsContent: React.FC<AnalystRatingsProps> = ({ ticker }) => {
 
                         return (
                             <div key={index} className="h-full flex-1 flex flex-col justify-end items-center group relative">
-                                <div className="w-full flex flex-col-reverse" style={{ height: `${barHeight}%` }}>
+                                <div 
+                                    className="w-full flex flex-col-reverse rounded-t-sm overflow-hidden transition-all duration-700 ease-out" 
+                                    style={{ height: isAnimated ? `${barHeight}%` : '0%' }}
+                                >
                                     {(Object.keys(ratingColors) as (keyof typeof ratingColors)[]).map(key => (
                                         rating[key] > 0 && (
                                             <div
@@ -170,7 +180,7 @@ const AnalystRatingsContent: React.FC<AnalystRatingsProps> = ({ ticker }) => {
 
 const AnalystRatings: React.FC<AnalystRatingsProps> = ({ ticker }) => {
     return (
-        <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
+        <div className="bg-card border border-border rounded-xl shadow-sm h-[500px] flex flex-col">
              <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-text-primary">Analyst Ratings</h3>
             </div>

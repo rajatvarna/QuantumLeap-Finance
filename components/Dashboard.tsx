@@ -119,17 +119,17 @@ const Dashboard: React.FC<DashboardProps> = ({ ticker }) => {
         <div className="space-y-8">
             <StockHeader ticker={ticker} />
 
-            <div className="border-b border-border sticky top-[72px] bg-background/80 backdrop-blur-sm z-30">
-                <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+            <div className="sticky top-[72px] bg-background/80 backdrop-blur-md z-30 -mx-1">
+                <nav className="flex space-x-2 border-b border-border px-1" aria-label="Tabs">
                     {tabs.map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`${
                                 activeTab === tab
-                                    ? 'border-accent text-accent'
-                                    : 'border-transparent text-text-secondary hover:text-text-primary hover:border-gray-300 dark:hover:border-gray-700'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+                                    ? 'bg-accent/10 text-accent font-semibold'
+                                    : 'text-text-secondary hover:text-text-primary hover:bg-background'
+                            } whitespace-nowrap py-2 px-4 rounded-t-lg font-medium text-sm transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background`}
                             aria-current={activeTab === tab ? 'page' : undefined}
                         >
                             {tab}

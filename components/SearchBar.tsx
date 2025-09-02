@@ -70,7 +70,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ setTicker, initialTicker }) => {
                     onChange={(e) => setInputValue(e.target.value)}
                     onFocus={() => setIsFocused(true)}
                     placeholder="Search for a stock..."
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors"
+                    className="w-full bg-card border border-border rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-colors"
                     aria-autocomplete="list"
                     aria-expanded={showResults}
                 />
@@ -86,7 +86,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ setTicker, initialTicker }) => {
                 </button>
             </form>
             {showResults && (
-                <div className="absolute z-10 w-full mt-2 bg-card border border-border rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-2 bg-card border border-border rounded-lg shadow-md max-h-80 overflow-y-auto">
                     {isLoading && (
                         <div className="p-4 flex items-center justify-center text-text-secondary">
                             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

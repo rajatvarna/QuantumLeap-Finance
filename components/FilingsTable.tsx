@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -180,7 +181,7 @@ const FilingsTable: React.FC<FilingsTableProps> = ({ ticker }) => {
     const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
 
     return (
-        <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
+        <div className="bg-card border border-border rounded-xl shadow-sm h-[500px] flex flex-col">
              <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-text-primary">Recent Filings</h3>
                 <div>{headerActions}</div>

@@ -1,5 +1,6 @@
 
 
+
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDetailedFinancialsAndMetrics } from '../services/finnhubService';
@@ -190,7 +191,7 @@ const FinancialsViewContent: React.FC<FinancialsViewProps> = ({ ticker }) => {
     }
 
     return (
-        <div className="bg-card border border-border rounded-xl">
+        <div className="bg-card border border-border rounded-xl shadow-sm">
              <div className="p-4 sm:p-6 border-b border-border flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-text-primary">Detailed Financials</h2>
                 <button

@@ -71,7 +71,7 @@ const CompanyProfileWidget: React.FC<CompanyProfileWidgetProps> = ({ ticker }) =
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
+        <div className="bg-card border border-border rounded-xl shadow-sm h-[500px] flex flex-col">
             <div className="p-4 sm:p-6 border-b border-border">
                 <h3 className="text-lg font-semibold text-text-primary">Company Profile</h3>
             </div>

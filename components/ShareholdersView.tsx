@@ -1,4 +1,5 @@
 
+
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchShareholders, fetchStockData } from '../services/finnhubService';
@@ -47,7 +48,7 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
 
     if (isLoading) {
         return (
-             <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
+             <div className="bg-card border border-border rounded-xl shadow-sm p-4 sm:p-6">
                 <SkeletonLoader className="h-96 w-full" />
             </div>
         );
@@ -55,7 +56,7 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
     
     if (isError) {
         return (
-            <div className="text-center p-8 bg-card border border-border rounded-xl">
+            <div className="text-center p-8 bg-card border border-border rounded-xl shadow-sm">
                 <p className="text-negative font-semibold">Could not load shareholder data.</p>
                 <button
                     onClick={() => refetch()}
@@ -69,7 +70,7 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
     }
     
     if (!sortedShareholders || sortedShareholders.length === 0) {
-        return <div className="text-center text-text-secondary p-4 bg-card border border-border rounded-xl">No institutional shareholder data found.</div>;
+        return <div className="text-center text-text-secondary p-4 bg-card border border-border rounded-xl shadow-sm">No institutional shareholder data found.</div>;
     }
 
     const SortableHeader: React.FC<{ sortKey: keyof ShareholderWithOwnership; children: React.ReactNode; className?: string }> = ({ sortKey, children, className = '' }) => (
@@ -85,7 +86,7 @@ const ShareholdersViewContent: React.FC<ShareholdersViewProps> = ({ ticker }) =>
     );
 
     return (
-        <div className="bg-card border border-border rounded-xl">
+        <div className="bg-card border border-border rounded-xl shadow-sm">
             <div className="p-4 sm:p-6 border-b border-border">
                 <h3 className="text-lg font-semibold text-text-primary">Major Institutional Shareholders</h3>
             </div>

@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useRef, memo, useState } from 'react';
 import { useTheme } from '../hooks/useTheme';
 import SkeletonLoader from './SkeletonLoader';
@@ -19,17 +20,17 @@ const getThemeOptions = (theme: 'light' | 'dark') => {
     return {
         theme: isDark ? "dark" : "light",
         overrides: {
-            "paneProperties.background": isDark ? "#10141B" : "#FFFFFF",
+            "paneProperties.background": isDark ? "rgb(31 41 55)" : "#FFFFFF",
             "paneProperties.vertGridProperties.color": isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)",
             "paneProperties.horzGridProperties.color": isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)",
             "symbolWatermarkProperties.color": isDark ? "rgba(229, 231, 235, 0.05)" : "rgba(0, 0, 0, 0.05)",
             "scalesProperties.textColor": isDark ? "#9CA3AF" : "#6B7280",
-            "mainSeriesProperties.candleStyle.upColor": isDark ? "#22C55E" : "#16A34A",
-            "mainSeriesProperties.candleStyle.downColor": isDark ? "#EF4444" : "#DC2626",
-            "mainSeriesProperties.candleStyle.borderUpColor": isDark ? "#22C55E" : "#16A34A",
-            "mainSeriesProperties.candleStyle.borderDownColor": isDark ? "#EF4444" : "#DC2626",
-            "mainSeriesProperties.candleStyle.wickUpColor": isDark ? "#22C55E" : "#16A34A",
-            "mainSeriesProperties.candleStyle.wickDownColor": isDark ? "#EF4444" : "#DC2626",
+            "mainSeriesProperties.candleStyle.upColor": isDark ? "#4ADF8C" : "#15803D",
+            "mainSeriesProperties.candleStyle.downColor": isDark ? "#F87171" : "#B91C1C",
+            "mainSeriesProperties.candleStyle.borderUpColor": isDark ? "#4ADF8C" : "#15803D",
+            "mainSeriesProperties.candleStyle.borderDownColor": isDark ? "#F87171" : "#B91C1C",
+            "mainSeriesProperties.candleStyle.wickUpColor": isDark ? "#4ADF8C" : "#15803D",
+            "mainSeriesProperties.candleStyle.wickDownColor": isDark ? "#F87171" : "#B91C1C",
         },
     };
 };
@@ -100,7 +101,7 @@ const StockChart: React.FC<StockChartProps> = ({ ticker }) => {
     }, [ticker, theme]);
 
     return (
-        <div className="bg-card border border-border rounded-xl shadow-lg h-[500px] flex flex-col transition-colors duration-300">
+        <div className="bg-card border border-border rounded-xl shadow-sm h-[500px] flex flex-col transition-colors duration-300">
              <div className="p-4 sm:p-6 border-b border-border">
                 <h3 className="text-lg font-semibold text-text-primary">Price History</h3>
             </div>

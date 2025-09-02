@@ -22,7 +22,7 @@ const InsiderTransactionsViewContent: React.FC<InsiderTransactionsViewProps> = (
 
     if (isLoading) {
         return (
-             <div className="bg-card border border-border rounded-xl p-4 sm:p-6">
+             <div className="bg-card border border-border rounded-xl shadow-sm p-4 sm:p-6">
                 <SkeletonLoader className="h-96 w-full" />
             </div>
         );
@@ -30,7 +30,7 @@ const InsiderTransactionsViewContent: React.FC<InsiderTransactionsViewProps> = (
     
     if (isError) {
         return (
-            <div className="text-center p-8 bg-card border border-border rounded-xl">
+            <div className="text-center p-8 bg-card border border-border rounded-xl shadow-sm">
                 <p className="text-negative font-semibold">Could not load insider transaction data.</p>
                 <button
                     onClick={() => refetch()}
@@ -44,7 +44,7 @@ const InsiderTransactionsViewContent: React.FC<InsiderTransactionsViewProps> = (
     }
     
     if (!sortedTransactions || sortedTransactions.length === 0) {
-        return <div className="text-center text-text-secondary p-4 bg-card border border-border rounded-xl">No recent insider trading activity found.</div>;
+        return <div className="text-center text-text-secondary p-4 bg-card border border-border rounded-xl shadow-sm">No recent insider trading activity found.</div>;
     }
 
     const SortableHeader: React.FC<{ sortKey: keyof InsiderTransaction; children: React.ReactNode; className?: string }> = ({ sortKey, children, className = '' }) => (
@@ -66,7 +66,7 @@ const InsiderTransactionsViewContent: React.FC<InsiderTransactionsViewProps> = (
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl">
+        <div className="bg-card border border-border rounded-xl shadow-sm">
             <div className="p-4 sm:p-6 border-b border-border">
                 <h3 className="text-lg font-semibold text-text-primary">Insider Trading Activity</h3>
             </div>

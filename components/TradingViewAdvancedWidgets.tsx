@@ -74,7 +74,7 @@ const TechnicalAnalysisWidget: React.FC<TechnicalAnalysisWidgetProps> = ({ ticke
     };
 
     return (
-        <div className="bg-card border border-border rounded-xl h-[500px] flex flex-col">
+        <div className="bg-card border border-border rounded-xl shadow-sm h-[500px] flex flex-col">
             <div className="p-4 sm:p-6 border-b border-border">
                 <h3 className="text-lg font-semibold text-text-primary">Technical Analysis</h3>
             </div>

@@ -37,10 +37,10 @@ const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
         webSocketManager.subscribe(ticker, (price) => {
             setLivePrice(price);
             
-            // Show live indicator for 1 second after a price update
+            // Show live indicator for 2 seconds after a price update
             setIsLive(true);
             clearTimeout(timeoutId);
-            timeoutId = window.setTimeout(() => setIsLive(false), 1000);
+            timeoutId = window.setTimeout(() => setIsLive(false), 2000);
         });
 
         return () => {
@@ -80,7 +80,7 @@ const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
     const isPositive = change >= 0;
 
     return (
-        <div className="p-4 sm:p-6 bg-card rounded-xl border border-border">
+        <div className="p-4 sm:p-6 bg-card rounded-xl border border-border shadow-sm">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 {/* Left Side: Company Info */}
                 <div className="flex-grow">
@@ -89,14 +89,17 @@ const StockHeader: React.FC<StockHeaderProps> = ({ ticker }) => {
                 </div>
                 
                 {/* Right Side: Price Info */}
-                <div className="text-left md:text-right w-full md:w-auto">
-                    <div className="flex items-center md:justify-end gap-3">
-                         <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${isLive ? 'bg-positive' : 'bg-text-tertiary'}`} title={isLive ? 'Live data' : 'Delayed data'}></div>
-                        <p className="text-4xl font-semibold text-text-primary">${displayPrice.toFixed(2)}</p>
+                <div className="flex flex-col items-start md:items-end w-full md:w-auto">
+                    <div className="flex items-center gap-3">
+                         <div className={`w-3 h-3 rounded-full transition-colors duration-300 ${isLive ? 'bg-positive animate-pulse-live' : 'bg-text-tertiary'}`} title={isLive ? 'Live data' : 'Delayed data'}></div>
+                        <p className="text-5xl font-semibold text-text-primary">${displayPrice.toFixed(2)}</p>
                     </div>
-                    <p className={`text-xl font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
-                        {isPositive ? '+' : ''}{change.toFixed(2)} ({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)
-                    </p>
+                     <div className={`mt-1 flex items-center justify-end gap-2 text-xl font-semibold ${isPositive ? 'text-positive' : 'text-negative'}`}>
+                        <span>{isPositive ? '▲' : '▼'} {Math.abs(change).toFixed(2)}</span>
+                        <span className={`px-2 py-0.5 text-base rounded-md ${isPositive ? 'bg-positive/10' : 'bg-negative/10'}`}>
+                            {isPositive ? '+' : ''}{changePercent.toFixed(2)}%
+                        </span>
+                    </div>
                 </div>
             </div>
 

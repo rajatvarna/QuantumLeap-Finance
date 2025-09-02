@@ -21,13 +21,13 @@ const Header: React.FC = () => {
     );
 
     return (
-        <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-sm border-b border-border shadow-md transition-colors duration-300">
+        <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b border-border shadow-sm transition-colors duration-300">
             <div className="max-w-7xl mx-auto flex justify-between items-center p-4">
-                <div className="flex items-center space-x-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center space-x-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <h1 className="text-xl font-bold text-text-primary">QuantumLeap Finance</h1>
+                    <h1 className="text-2xl font-bold text-text-primary">QuantumLeap</h1>
                 </div>
                 <div className="flex items-center space-x-4">
                     {user ? (
